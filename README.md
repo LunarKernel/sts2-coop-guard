@@ -3,6 +3,9 @@
 `CoopGuard` blocks multiplayer ready/start when connected players have
 different effective Mod package files.
 
+Private Workshop test item:
+https://steamcommunity.com/sharedfiles/filedetails/?id=3772631781
+
 Version 1 deliberately complements STS2's built-in checks:
 
 - STS2 continues to validate the game version, gameplay Mod list, ModelDb and
