@@ -518,3 +518,12 @@ All timestamps use Asia/Taipei (UTC+08:00).
 - Added the v0.3.0 fatal-diagnosis description and change note.
 - Reopened the item in Steam and confirmed the 99.680 KB content size,
   v0.3.0 change note, updated timestamp and `Hidden` visibility.
+
+### 02:56 - Version 0.3.0 pushed to GitHub
+
+- Committed the v0.3.0 implementation and publication evidence as `06ac02e`
+  (`Add fatal multiplayer diagnostics`) and pushed the existing
+  `agent/coopguard-v0.2.1` branch.
+- Updated draft PR #1 against `main` to describe the full validation hardening
+  and fatal-diagnosis scope:
+  `https://github.com/LunarKernel/sts2-coop-guard/pull/1`.
