@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Deterministic>true</Deterministic>
+    <AssemblyName>CoopGuard</AssemblyName>
+    <RootNamespace>CoopGuard</RootNamespace>
+    <NoWarn>$(NoWarn);MSB3270</NoWarn>
+
+    <RegistrySts2Path>$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 2868840', 'InstallLocation', '', RegistryView.Registry64, RegistryView.Registry32))</RegistrySts2Path>
+    <Sts2Path Condition="'$(Sts2Path)' == '' and Exists('$(RegistrySts2Path)')">$(RegistrySts2Path)</Sts2Path>
+    <Sts2Path Condition="'$(Sts2Path)' == ''">C:/Program Files (x86)/Steam/steamapps/common/Slay the Spire 2</Sts2Path>
+    <Sts2DataDir>$(Sts2Path)/data_sts2_windows_x86_64</Sts2DataDir>
+    <PackageDir>$(MSBuildProjectDirectory)/../../artifacts/CoopGuard</PackageDir>
+  </PropertyGroup>
+
+  <ItemGroup Condition="Exists('$(Sts2DataDir)')">
+    <Reference Include="0Harmony">
+      <HintPath>$(Sts2DataDir)/0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="GodotSharp">
+      <HintPath>$(Sts2DataDir)/GodotSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="sts2">
+      <HintPath>$(Sts2DataDir)/sts2.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="CoopGuard.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="CheckSts2Path" BeforeTargets="ResolveReferences">
+    <Error
+      Text="Slay the Spire 2 data directory was not found at '$(Sts2DataDir)'. Pass -p:Sts2Path=&quot;...&quot;."
+      Condition="!Exists('$(Sts2DataDir)/sts2.dll')" />
+  </Target>
+
+  <Target Name="PackageMod" AfterTargets="Build">
+    <MakeDir Directories="$(PackageDir)" />
+    <Copy SourceFiles="$(TargetPath);$(MSBuildProjectDirectory)/CoopGuard.json"
+          DestinationFolder="$(PackageDir)" />
+  </Target>
+</Project>

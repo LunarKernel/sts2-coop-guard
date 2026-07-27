@@ -1,0 +1,12 @@
+{
+  "id": "CoopGuard",
+  "name": "STS2 Co-op Guard",
+  "author": "LunarKernel",
+  "description": "Blocks multiplayer starts when peers have different loaded Mod package files.",
+  "version": "v0.1.0",
+  "min_game_version": "0.109.1",
+  "has_pck": false,
+  "has_dll": true,
+  "dependencies": [],
+  "affects_gameplay": true
+}
