@@ -40,22 +40,7 @@ internal static class CompatibilityGate
     public static void ReportBlocked(string action, string reason)
     {
         Main.Log.Warn($"Blocked {action}: " + reason.Replace('\n', ' '));
-        try
-        {
-            NErrorPopup? popup = NErrorPopup.Create(
-                "STS2 Co-op Guard",
-                reason,
-                showReportBugButton: false);
-            if (popup != null && NModalContainer.Instance != null)
-            {
-                NModalContainer.Instance.Add(popup);
-            }
-        }
-        catch (Exception ex)
-        {
-            // UI failure must never bypass the compatibility gate.
-            Main.Log.Error($"Could not show CoopGuard popup: {ex}");
-        }
+        FatalIncidentReporter.ShowLocalVerification(reason);
     }
 
     public static bool IsMultiplayer(NetGameType type) =>

@@ -450,3 +450,71 @@ All timestamps use Asia/Taipei (UTC+08:00).
 - The isolated repaired profile had already confirmed JmcModLib `1.7.0` and
   BetterSaveSlots `1.2.0` both initialize without the native missing-dependency
   failure. The live game was not launched after the setting edit.
+
+### 01:46 - Version 0.3.0 bilingual fatal diagnosis
+
+- Added a dependency-free incident explainer and integrated it at STS2's two
+  authoritative error UI paths:
+  - `NErrorPopup.Create(NetErrorInfo)` for terminal multiplayer/network
+    failures;
+  - `NGame.ReturnToMainMenuWithInternalError(Exception)` and its native
+    internal-error popup for managed errors that force the run back to menu.
+- Replaced the old local fingerprint-failure popup body with the same
+  structured diagnosis format.
+- Added built-in Chinese and English explanations for state divergence,
+  effective-package and Mod-list mismatch, transport and handshake timeouts,
+  game/data-model mismatch, offline/secure-connection/hosting/platform
+  failures, missing dependencies, incompatible APIs, Harmony patch failures,
+  explicit soft-lock exceptions and unknown internal errors.
+- Every diagnosis now separates error code, confidence, root cause, evidence
+  and next action. State divergence does not blame the last card/action or one
+  Mod without stronger evidence; a third-party stack frame is described as the
+  failure location rather than automatic proof of the original cause.
+- Language follows `LocManager.Instance.Language`: `zhs`, `zht` and other
+  `zh*` values use Chinese; all other languages fall back to English.
+- Subscribed to STS2's global log callback but retained only the latest 80
+  emitted warning/error messages in memory. Logs are supporting context for an
+  already-authoritative failure; an ordinary `Error` never triggers a popup.
+- Diagnostic text redacts Steam IDs, IP endpoints, credentials and absolute
+  paths. Raw logs, fingerprints, settings, saves and account data are neither
+  persisted by this feature nor transmitted to peers.
+- Bumped the assembly and manifest to `v0.3.0`; the native compatibility wire
+  entry remains version 3 because its format did not change.
+- Validation completed against STS2 `0.109.1`:
+  - Release build with warnings as errors: zero warnings and errors;
+  - fingerprint/incident self-check passed, including Chinese/English text,
+    common classification, normal-quit exclusion and privacy redaction;
+  - formatting verification passed;
+  - Harmony smoke patched and removed all 18 expected targets under the
+    bundled .NET `9.0.7` runtime;
+  - isolated real-game English and Chinese `StateDivergence` popups were
+    created and installed into the native modal container;
+  - an isolated English `MissingMethodException` internal-error popup resolved
+    to `CG-MOD-API-INCOMPATIBLE`;
+  - an isolated matching two-client ENet run joined, readied and embarked with
+    identical fingerprints on both peers.
+- The first two-client orchestration attempt used PowerShell's reserved
+  `$Host` variable, so it started only the client and produced no multiplayer
+  result. The corrected attempt used explicit process variables; both exact
+  isolated processes exited after the successful run.
+- Headless shutdown again emitted the known dummy-renderer RID/resource and
+  occasional worker task cleanup warnings after the relevant evidence.
+- Preserved the final two-file candidate at
+  `artifacts/staging/v0.3.0-20260728-0148`:
+  - `CoopGuard.dll`, 99,328 bytes, SHA-256
+    `4326b6596ff341c6b650d840fd6bace89d063efe0b70b0dc14a34c3b4bc406e9`;
+  - `CoopGuard.json`, 352 bytes, SHA-256
+    `b728799633610c62dc0f66c794fbaada48d2de685ab34e95f0dbb28077839952`.
+  The assembly version is `0.3.0.0` and the manifest version is `v0.3.0`.
+- No build was installed into the live game.
+
+### 02:53 - Version 0.3.0 uploaded privately
+
+- Updated existing Workshop item `3772631781` in place through Mega Crit's
+  official ModUploader and the signed-in Steam client; no duplicate item was
+  created.
+- Uploaded exactly the validated two-file candidate: 99,328-byte
+  `CoopGuard.dll` and 352-byte `CoopGuard.json`.
+- Added the v0.3.0 fatal-diagnosis description and change note.
+- Reopened the item in Steam and confirmed the 99.680 KB content size,
+  v0.3.0 change note, updated timestamp and `Hidden` visibility.

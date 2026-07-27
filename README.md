@@ -39,6 +39,27 @@ There is no custom network message. Peers receive only the aggregate digest
 already carried by STS2's native Mod-list handshake—not file contents,
 absolute paths, settings, saves or account data.
 
+## Fatal error explanations
+
+CoopGuard replaces STS2's short popup for recognized multiplayer failures with
+an actionable diagnosis. It uses the game's structured failure reason first
+and a bounded in-memory tail of recent warning/error logs only as supporting
+evidence. A normal log `Error` does not trigger a popup by itself.
+
+Built-in explanations cover state divergence, Mod/package mismatch, transport
+and handshake timeouts, game/data-model mismatch, offline and secure-connection
+failures, hosting/platform errors, missing or unloadable dependencies,
+incompatible Mod APIs, Harmony patch failures, soft-lock exceptions and
+otherwise unknown internal errors. Each popup separates the root cause,
+evidence, confidence and next action. It does not claim that the last action,
+card or stack frame proves one responsible Mod.
+
+The popup follows STS2's current language. Simplified or Traditional Chinese
+uses the Chinese text; every other language falls back to English. No log,
+path, Steam ID, IP address, credential, save or fingerprint is uploaded or
+sent to peers. Native crashes that terminate Godot before it can create UI
+cannot display an in-game popup.
+
 CoopGuard does not modify combat, RNG, run or save state, and it never attempts
 to repair divergence. It is a compatibility guard for trusted co-op peers, not
 anti-cheat or remote attestation.
@@ -62,7 +83,7 @@ dotnet build src/CoopGuard/CoopGuard.csproj `
   -c Release -warnaserror `
   -p:Sts2Path="C:\SteamLibrary\steamapps\common\Slay the Spire 2" `
   -p:CreateModPackage=true `
-  -p:PackageDir="C:\path\to\new\v0.2.1-stage"
+  -p:PackageDir="C:\path\to\new\v0.3.0-stage"
 ```
 
 The staging directory must contain exactly:
@@ -84,8 +105,10 @@ renames, added files, same-length byte changes with restored timestamps,
 canonical path privacy, raw Unicode path identity, Unicode-normalization
 collisions, caller-supplied limits, mounted-PCK byte capture, quick metadata
 checks, reparse-point rejection and the scoped OnlineExchange runtime-data
-rule. It runs on the installed .NET 10 runtime; the Release build separately
-compiles the actual Mod for STS2's .NET 9 runtime.
+rule. It also covers Chinese and English incident text, error classification,
+normal-quit exclusion and diagnostic redaction. It runs on the installed .NET
+10 runtime; the Release build separately compiles the actual Mod for STS2's
+.NET 9 runtime.
 
 ## Current boundaries
 
@@ -118,14 +141,14 @@ compiles the actual Mod for STS2's .NET 9 runtime.
   change makes the next connection or rejoin fail closed, but cannot undo state
   already executed in the current run.
 - Identical package bytes can still contain the same deterministic bug.
-- Version `v0.2.1` is built against STS2 `0.109.1`. It passed the Release,
-  self-check, formatting and 15-target Harmony smoke gates, plus isolated
-  full-Mod-set startup, matching fresh/loaded lobbies, fresh-run start,
-  running-game rejoin handshake, a three-player start, same-ID/version package
-  mismatch rejection, initial-info TOCTOU rejection and deferred generated-PCK
-  settlement. These multiplayer tests used local ENet with Steam disabled;
-  real Steam transport remains untested. Every game update requires the checks
-  to be repeated.
+- Version `v0.3.0` is built against STS2 `0.109.1`. Its incident feature has
+  passed the Release build, pure self-check, 18-target Harmony smoke test and
+  isolated English/Chinese native-modal runtime checks. A matching isolated
+  two-client ENet run also joined, readied and embarked. The unchanged
+  remaining gates previously passed full-Mod-set startup, loaded lobbies,
+  running-game rejoin handshake, three-player start, mismatch/TOCTOU rejection
+  and generated-PCK settlement under local ENet. Real Steam transport remains
+  untested. Every game update requires these checks to be repeated.
 
 Development evidence and command results are kept in
 [docs/WORKLOG.md](docs/WORKLOG.md).

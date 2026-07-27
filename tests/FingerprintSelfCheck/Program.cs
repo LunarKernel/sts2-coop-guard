@@ -44,6 +44,157 @@ static void WriteFixture(string root, bool reverse)
     }
 }
 
+IncidentText chineseDivergence = IncidentExplainer.ExplainNetwork(
+    "StateDivergence",
+    [],
+    [],
+    "StateDivergence",
+    [],
+    chinese: true)
+    ?? throw new InvalidOperationException("State divergence was not explained.");
+Check(
+    chineseDivergence.Code == "CG-STATE-DIVERGENCE"
+        && chineseDivergence.Body.Contains("根因", StringComparison.Ordinal)
+        && chineseDivergence.Body.Contains("不能单独证明责任 Mod", StringComparison.Ordinal),
+    "Chinese state-divergence guidance became incomplete.");
+
+IncidentText englishDivergence = IncidentExplainer.ExplainNetwork(
+    "StateDivergence",
+    [],
+    [],
+    "StateDivergence",
+    [],
+    chinese: false)
+    ?? throw new InvalidOperationException("State divergence was not explained.");
+Check(
+    englishDivergence.Code == chineseDivergence.Code
+        && englishDivergence.Body.Contains("Root cause", StringComparison.Ordinal)
+        && englishDivergence.Body.Contains("does not by itself identify", StringComparison.Ordinal),
+    "English state-divergence guidance became incomplete.");
+
+IncidentText byteMismatch = IncidentExplainer.ExplainNetwork(
+    "ModMismatch",
+    ["CoopGuard-package-v3-aaaaaaaa"],
+    ["CoopGuard-package-v3-bbbbbbbb"],
+    "ModMismatch",
+    [],
+    chinese: true)
+    ?? throw new InvalidOperationException("Package mismatch was not explained.");
+Check(
+    byteMismatch.Code == "CG-MOD-MISMATCH"
+        && byteMismatch.Body.Contains("有效包内容指纹不同", StringComparison.Ordinal)
+        && !byteMismatch.Body.Contains("aaaaaaaa", StringComparison.Ordinal),
+    "Package-byte mismatch details were missing or leaked a fingerprint.");
+
+IncidentText modSetMismatch = IncidentExplainer.ExplainNetwork(
+    "ModMismatch",
+    ["HostOnly 1.0"],
+    ["LocalOnly 2.0"],
+    "ModMismatch",
+    [],
+    chinese: false)
+    ?? throw new InvalidOperationException("Mod-set mismatch was not explained.");
+Check(
+    modSetMismatch.Body.Contains("HostOnly 1.0", StringComparison.Ordinal)
+        && modSetMismatch.Body.Contains("LocalOnly 2.0", StringComparison.Ordinal),
+    "Safe native Mod-list differences were not preserved.");
+
+IncidentText internalNetwork = IncidentExplainer.ExplainNetwork(
+    "InternalError",
+    [],
+    [],
+    "internal failure",
+    ["before", "MissingMethodException: method changed"],
+    chinese: false)
+    ?? throw new InvalidOperationException("Internal network error was not explained.");
+Check(
+    internalNetwork.Code == "CG-MOD-API-INCOMPATIBLE-NET"
+        && internalNetwork.Body.Contains("MissingMethodException", StringComparison.Ordinal),
+    "A known API incompatibility in recent fatal context was not classified.");
+
+(string Reason, string Code)[] networkCases =
+[
+    ("Timeout", "CG-NET-TIMEOUT"),
+    ("HandshakeTimeout", "CG-HANDSHAKE-TIMEOUT"),
+    ("VersionMismatch", "CG-GAME-VERSION-MISMATCH"),
+    ("NoInternet", "CG-NET-OFFLINE"),
+    ("SecureConnectionFailed", "CG-NET-SECURE-CONNECTION"),
+    ("FailedToHost", "CG-NET-HOST-FAILED"),
+    ("RateLimited", "CG-NET-RATE-LIMITED"),
+    ("TryAgainLater", "CG-NET-TRY-LATER")
+];
+foreach ((string reason, string code) in networkCases)
+{
+    IncidentText chinese = IncidentExplainer.ExplainNetwork(
+        reason,
+        [],
+        [],
+        reason,
+        [],
+        chinese: true)
+        ?? throw new InvalidOperationException($"{reason} was not explained.");
+    IncidentText english = IncidentExplainer.ExplainNetwork(
+        reason,
+        [],
+        [],
+        reason,
+        [],
+        chinese: false)
+        ?? throw new InvalidOperationException($"{reason} was not explained.");
+    Check(
+        chinese.Code == code
+            && english.Code == code
+            && chinese.Body.Contains("根因", StringComparison.Ordinal)
+            && english.Body.Contains("Root cause", StringComparison.Ordinal),
+        $"{reason} did not retain complete Chinese and English explanations.");
+}
+
+(string ExceptionType, string Code)[] exceptionCases =
+[
+    ("MissingMethodException", "CG-MOD-API-INCOMPATIBLE"),
+    ("FileNotFoundException", "CG-MOD-DEPENDENCY"),
+    ("HarmonyException", "CG-HARMONY-PATCH"),
+    ("SoftlockException", "CG-SOFTLOCK")
+];
+foreach ((string exceptionType, string code) in exceptionCases)
+{
+    IncidentText incident = IncidentExplainer.ExplainException(
+        exceptionType,
+        "FixtureMod",
+        "FixtureDependency.dll",
+        chinese: false);
+    Check(
+        incident.Code == code
+            && incident.Body.Contains("Root cause", StringComparison.Ordinal),
+        $"{exceptionType} was not mapped to its expected root cause.");
+}
+
+IncidentText changedFiles = IncidentExplainer.ExplainLocalVerification(
+    "A Mod package changed after startup. Restart the game before multiplayer.",
+    chinese: true);
+Check(
+    changedFiles.Code == "CG-LOCAL-FILES-CHANGED",
+    "A changed local package was not given its specific root cause.");
+
+Check(
+    IncidentExplainer.ExplainNetwork(
+        "Quit",
+        [],
+        [],
+        "Quit",
+        ["MissingMethodException from an older unrelated event"],
+        chinese: true) == null,
+    "A normal quit was incorrectly converted into a fatal diagnosis.");
+
+string redacted = IncidentExplainer.Redact(
+    "76561198824432109 127.0.0.1:1234 token=secret C:\\Users\\name\\save.dat");
+Check(
+    !redacted.Contains("76561198824432109", StringComparison.Ordinal)
+        && !redacted.Contains("127.0.0.1", StringComparison.Ordinal)
+        && !redacted.Contains("secret", StringComparison.Ordinal)
+        && !redacted.Contains("C:\\Users", StringComparison.Ordinal),
+    "A diagnostic summary leaked identity, network, credential, or path data.");
+
 string escaped = FingerprintCodec.Line("a|b", "line\r\nbreak", "100%");
 Check(
     escaped == "a%7Cb|line%0D%0Abreak|100%25",
@@ -238,4 +389,4 @@ finally
     Directory.Delete(temporary.FullName, recursive: true);
 }
 
-Console.WriteLine("Fingerprint self-check passed.");
+Console.WriteLine("Fingerprint and incident-explanation self-check passed.");

@@ -13,9 +13,11 @@ public static class Main
 
     public static void Initialize()
     {
+        FatalIncidentReporter.Initialize();
         // The ExecuteEssential postfix captures after every startup Mod has loaded,
         // before any command-line or menu join can enter the network handshake.
         new Harmony(ModId).PatchAll();
-        Log.Info("Initialized. Package fingerprints will be added to STS2's native Mod compatibility check.");
+        Log.Info(
+            "Initialized. Package fingerprints and bilingual fatal-error explanations are active.");
     }
 }
