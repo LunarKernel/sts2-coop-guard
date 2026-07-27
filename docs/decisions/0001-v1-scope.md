@@ -1,6 +1,6 @@
 # ADR 0001: Version 1 is a package-fingerprint lobby guard
 
-- Status: accepted
+- Status: superseded in part by ADR 0002
 - Date: 2026-07-27
 
 ## Context

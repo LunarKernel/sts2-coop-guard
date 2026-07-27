@@ -1,252 +1,51 @@
-using System.Runtime.CompilerServices;
+using System.Reflection;
+using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Multiplayer;
-using MegaCrit.Sts2.Core.Logging;
+using MegaCrit.Sts2.Core.Helpers;
+using MegaCrit.Sts2.Core.Modding;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Multiplayer.Game.Lobby;
-using MegaCrit.Sts2.Core.Multiplayer.Serialization;
-using MegaCrit.Sts2.Core.Multiplayer.Transport;
+using MegaCrit.Sts2.Core.Multiplayer.Messages.Lobby;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
-using MegaCrit.Sts2.Core.Runs;
+using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
+using MegaCrit.Sts2.Core.Nodes.Screens.CustomRun;
+using MegaCrit.Sts2.Core.Nodes.Screens.DailyRun;
 
 namespace CoopGuard;
 
-public struct FingerprintMessage : INetMessage
+internal static class CompatibilityGate
 {
-    public const int CurrentProtocol = 1;
+    public static bool CanProceed(out string reason)
+        => IsValid(ModFingerprint.ValidateCurrent(), out reason);
 
-    public int protocol;
-    public string digest;
-    public string details;
-    public string error;
+    public static bool CanProceedQuick(out string reason)
+        => IsValid(ModFingerprint.ValidateQuick(), out reason);
 
-    public bool ShouldBroadcast => true;
-    public NetTransferMode Mode => NetTransferMode.Reliable;
-    public LogLevel LogLevel => LogLevel.Info;
-    public bool ShouldBuffer => true;
-
-    public void Serialize(PacketWriter writer)
+    private static bool IsValid(
+        FingerprintSnapshot snapshot,
+        out string reason)
     {
-        writer.WriteInt(protocol);
-        writer.WriteString(digest ?? string.Empty);
-        writer.WriteString(details ?? string.Empty);
-        writer.WriteString(error ?? string.Empty);
-    }
-
-    public void Deserialize(PacketReader reader)
-    {
-        protocol = reader.ReadInt();
-        digest = reader.ReadString();
-        details = reader.ReadString();
-        error = reader.ReadString();
-    }
-}
-
-internal static class LobbyGuards
-{
-    private static readonly ConditionalWeakTable<StartRunLobby, LobbyGuardSession> Sessions = new();
-
-    public static void Attach(StartRunLobby lobby)
-    {
-        if (lobby.NetService.Type is NetGameType.Host or NetGameType.Client)
+        if (snapshot.Errors.Count == 0)
         {
-            Sessions.GetValue(lobby, current => new LobbyGuardSession(current, ModFingerprint.GetOrCapture()));
-        }
-    }
-
-    public static void Detach(StartRunLobby lobby)
-    {
-        if (Sessions.TryGetValue(lobby, out LobbyGuardSession? session))
-        {
-            session.Dispose();
-            Sessions.Remove(lobby);
-        }
-    }
-
-    public static bool CanStart(StartRunLobby lobby, out string reason)
-    {
-        reason = string.Empty;
-        if (lobby.NetService.Type is not (NetGameType.Host or NetGameType.Client))
-        {
+            reason = string.Empty;
             return true;
         }
 
-        if (!Sessions.TryGetValue(lobby, out LobbyGuardSession? session))
-        {
-            reason = "CoopGuard did not initialize for this multiplayer lobby.";
-            return false;
-        }
-
-        return session.CanStart(out reason);
-    }
-}
-
-internal sealed class LobbyGuardSession : IDisposable
-{
-    private const int MaxDetailsLength = 512 * 1024;
-    private const int MaxErrorLength = 4096;
-
-    private readonly StartRunLobby _lobby;
-    private readonly FingerprintSnapshot _local;
-    private readonly Dictionary<ulong, FingerprintMessage> _peers = [];
-    private readonly MessageHandlerDelegate<FingerprintMessage> _handler;
-
-    public LobbyGuardSession(StartRunLobby lobby, FingerprintSnapshot local)
-    {
-        _lobby = lobby;
-        _local = local;
-        _handler = OnFingerprint;
-        _peers[lobby.NetService.NetId] = CreateLocalMessage();
-
-        lobby.NetService.RegisterMessageHandler(_handler);
-        lobby.PlayerConnected += OnPlayerConnected;
-        lobby.PlayerDisconnected += OnPlayerDisconnected;
+        reason = "CoopGuard could not verify the local Mod packages:\n"
+            + string.Join('\n', snapshot.Errors.Take(6));
+        return false;
     }
 
-    public bool CanStart(out string reason)
+    public static void ReportBlocked(string action, string reason)
     {
-        if (_local.Errors.Count > 0)
-        {
-            reason = "Local package hashing failed:\n" + string.Join('\n', _local.Errors.Take(6));
-            return false;
-        }
-
-        List<ulong> missing = _lobby.Players
-            .Select(player => player.id)
-            .Where(id => !_peers.ContainsKey(id))
-            .ToList();
-        if (missing.Count > 0)
-        {
-            reason = "Waiting for package fingerprints from: " + string.Join(", ", missing);
-            return false;
-        }
-
-        foreach (LobbyPlayer player in _lobby.Players)
-        {
-            FingerprintMessage peer = _peers[player.id];
-            if (peer.protocol != FingerprintMessage.CurrentProtocol)
-            {
-                reason = $"Player {player.id} uses CoopGuard protocol {peer.protocol}; expected {FingerprintMessage.CurrentProtocol}.";
-                return false;
-            }
-
-            if (!string.IsNullOrEmpty(peer.error))
-            {
-                reason = $"Player {player.id} could not hash their Mod packages:\n{peer.error}";
-                return false;
-            }
-
-            if (!string.Equals(peer.digest, _local.Digest, StringComparison.Ordinal))
-            {
-                IReadOnlyList<string> diff = FingerprintCodec.Diff(_local.Details, peer.details);
-                reason = $"Player {player.id} has different Mod package files:\n"
-                    + string.Join('\n', diff);
-                return false;
-            }
-        }
-
-        reason = string.Empty;
-        return true;
-    }
-
-    public void Dispose()
-    {
-        _lobby.NetService.UnregisterMessageHandler(_handler);
-        _lobby.PlayerConnected -= OnPlayerConnected;
-        _lobby.PlayerDisconnected -= OnPlayerDisconnected;
-    }
-
-    private void OnPlayerConnected(LobbyPlayer _)
-    {
-        // Every existing peer re-announces itself when someone joins. This
-        // handles clients that were not ready to receive the host's first send.
+        Main.Log.Warn($"Blocked {action}: " + reason.Replace('\n', ' '));
         try
         {
-            _lobby.NetService.SendMessage(CreateLocalMessage());
-        }
-        catch (Exception ex)
-        {
-            // A failed send leaves the peer missing and therefore blocks ready.
-            Main.Log.Error($"Could not send package fingerprint: {ex}");
-        }
-    }
-
-    private void OnPlayerDisconnected(LobbyPlayer player) =>
-        _peers.Remove(player.id);
-
-    private void OnFingerprint(FingerprintMessage message, ulong senderId)
-    {
-        if (message.details.Length > MaxDetailsLength || message.error.Length > MaxErrorLength)
-        {
-            message = new FingerprintMessage
-            {
-                protocol = message.protocol,
-                error = "Rejected an oversized CoopGuard fingerprint message.",
-                digest = string.Empty,
-                details = string.Empty
-            };
-        }
-
-        _peers[senderId] = message;
-        Main.Log.Info($"Received package fingerprint {message.digest} from {senderId}.");
-
-        if (_lobby.NetService.Type == NetGameType.Host && senderId != _lobby.NetService.NetId)
-        {
-            // Direct reply avoids a join-time race where the host's first
-            // broadcast arrives before the new client's lobby handler exists.
-            try
-            {
-                _lobby.NetService.SendMessage(CreateLocalMessage(), senderId);
-            }
-            catch (Exception ex)
-            {
-                Main.Log.Error($"Could not reply with package fingerprint to {senderId}: {ex}");
-            }
-        }
-    }
-
-    private FingerprintMessage CreateLocalMessage() => new()
-    {
-        protocol = FingerprintMessage.CurrentProtocol,
-        digest = _local.Digest,
-        details = _local.Details,
-        error = string.Join('\n', _local.Errors)
-    };
-}
-
-[HarmonyPatch]
-internal static class StartRunLobbyConstructorPatch
-{
-    private static System.Reflection.MethodBase TargetMethod() =>
-        AccessTools.Constructor(
-            typeof(StartRunLobby),
-            [typeof(GameMode), typeof(INetGameService), typeof(IStartRunLobbyListener), typeof(int)]);
-
-    private static void Postfix(StartRunLobby __instance) =>
-        LobbyGuards.Attach(__instance);
-}
-
-[HarmonyPatch(typeof(StartRunLobby), nameof(StartRunLobby.CleanUp))]
-internal static class StartRunLobbyCleanupPatch
-{
-    private static void Prefix(StartRunLobby __instance) =>
-        LobbyGuards.Detach(__instance);
-}
-
-[HarmonyPatch(typeof(StartRunLobby), nameof(StartRunLobby.SetReady))]
-internal static class StartRunLobbyReadyPatch
-{
-    private static bool Prefix(StartRunLobby __instance, bool ready)
-    {
-        if (!ready || LobbyGuards.CanStart(__instance, out string reason))
-        {
-            return true;
-        }
-
-        Main.Log.Warn("Blocked ready: " + reason.Replace('\n', ' '));
-        try
-        {
-            NErrorPopup? popup = NErrorPopup.Create("STS2 Co-op Guard", reason, showReportBugButton: false);
+            NErrorPopup? popup = NErrorPopup.Create(
+                "STS2 Co-op Guard",
+                reason,
+                showReportBugButton: false);
             if (popup != null && NModalContainer.Instance != null)
             {
                 NModalContainer.Instance.Add(popup);
@@ -254,10 +53,138 @@ internal static class StartRunLobbyReadyPatch
         }
         catch (Exception ex)
         {
-            // Popup failure must not bypass the compatibility gate.
-            Main.Log.Error($"Could not show blocked-ready popup: {ex}");
+            // UI failure must never bypass the compatibility gate.
+            Main.Log.Error($"Could not show CoopGuard popup: {ex}");
+        }
+    }
+
+    public static bool IsMultiplayer(NetGameType type) =>
+        type is NetGameType.Host or NetGameType.Client;
+
+    public static bool CanAcceptClientBegin(
+        INetGameService netService,
+        string action)
+    {
+        if (netService.Type != NetGameType.Client
+            || CanProceedQuick(out string reason))
+        {
+            return true;
         }
 
+        Main.Log.Warn($"Rejected {action}: " + reason.Replace('\n', ' '));
+        try
+        {
+            netService.Disconnect(NetError.ModMismatch);
+        }
+        catch (Exception ex)
+        {
+            // Suppressing the begin handler still fails closed if disconnect fails.
+            Main.Log.Error($"Could not disconnect after rejecting {action}: {ex}");
+        }
+
+        return false;
+    }
+}
+
+[HarmonyPatch(typeof(OneTimeInitialization), nameof(OneTimeInitialization.ExecuteEssential))]
+internal static class FingerprintPrecomputePatch
+{
+    [HarmonyPriority(Priority.Last)]
+    private static async void Postfix()
+    {
+        try
+        {
+            ModFingerprint.Precompute();
+
+            if (Engine.GetMainLoop() is not SceneTree tree)
+            {
+                Main.Log.Warn(
+                    "Could not schedule the startup mounted-PCK settlement check.");
+                return;
+            }
+
+            await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
+            await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
+            ModFingerprint.SettleStartupMounts();
+        }
+        catch (Exception ex)
+        {
+            // A missing/failed baseline still yields the process-stable failure token.
+            Main.Log.Error(
+                $"Startup mounted-PCK settlement check failed: {ex}");
+        }
+    }
+}
+
+[HarmonyPatch(typeof(ModManager), nameof(ModManager.GetGameplayRelevantModNameList))]
+internal static class GameplayModListPatch
+{
+    [HarmonyPriority(Priority.Last)]
+    private static void Postfix(ref List<string>? __result)
+    {
+        __result ??= [];
+        __result.Add(ModFingerprint.GetCompatibilityEntry());
+    }
+}
+
+[HarmonyPatch(typeof(ModManager), nameof(ModManager.AssociateAssemblyWithMod))]
+internal static class LateAssemblyPatch
+{
+    private static void Prefix(string __0, out int __state) =>
+        __state = ModFingerprint.LoadedAssemblyCount(__0);
+
+    private static void Postfix(string __0, int __state)
+    {
+        if (ModFingerprint.LoadedAssemblyCount(__0) != __state)
+        {
+            ModFingerprint.MarkRuntimeChange();
+        }
+    }
+}
+
+[HarmonyPatch(typeof(JoinFlow), nameof(JoinFlow.Begin))]
+internal static class JoinFlowBeginPatch
+{
+    [HarmonyPriority(Priority.First)]
+    private static void Prefix() =>
+        ModFingerprint.ValidateCurrent();
+}
+
+[HarmonyPatch(
+    typeof(JoinFlow),
+    "HandleInitialGameInfoMessage",
+    [typeof(InitialGameInfoMessage), typeof(ulong)])]
+internal static class JoinFlowInitialGameInfoPatch
+{
+    [HarmonyPriority(Priority.First)]
+    private static bool Prefix(JoinFlow __instance) =>
+        CompatibilityGate.CanAcceptClientBegin(
+            __instance.NetService,
+            "initial game info");
+}
+
+[HarmonyPatch(typeof(InitialGameInfoMessage), nameof(InitialGameInfoMessage.Basic))]
+internal static class InitialGameInfoPatch
+{
+    [HarmonyPriority(Priority.First)]
+    private static void Prefix() =>
+        ModFingerprint.ValidateQuick();
+}
+
+[HarmonyPatch(typeof(StartRunLobby), nameof(StartRunLobby.SetReady))]
+internal static class StartRunLobbyReadyPatch
+{
+    [HarmonyPriority(Priority.First)]
+    private static bool Prefix(StartRunLobby __instance, bool ready)
+    {
+        if (!ready
+            || !CompatibilityGate.IsMultiplayer(__instance.NetService.Type)
+            || CompatibilityGate.CanProceed(out string reason))
+        {
+            return true;
+        }
+
+        CompatibilityGate.ReportBlocked("ready", reason);
         return false;
     }
 }
@@ -265,13 +192,124 @@ internal static class StartRunLobbyReadyPatch
 [HarmonyPatch(typeof(StartRunLobby), nameof(StartRunLobby.IsAboutToBeginGame))]
 internal static class StartRunLobbyBeginPatch
 {
+    [HarmonyPriority(Priority.Last)]
     private static void Postfix(StartRunLobby __instance, ref bool __result)
     {
-        if (__result && !LobbyGuards.CanStart(__instance, out string reason))
+        if (__result
+            && CompatibilityGate.IsMultiplayer(__instance.NetService.Type)
+            && !CompatibilityGate.CanProceed(out string reason))
         {
-            // This is the host-side final gate; never rely only on client UI.
             Main.Log.Warn("Blocked begin-run: " + reason.Replace('\n', ' '));
             __result = false;
         }
     }
+}
+
+[HarmonyPatch(
+    typeof(StartRunLobby),
+    "HandleLobbyBeginRunMessage",
+    [typeof(LobbyBeginRunMessage), typeof(ulong)])]
+internal static class StartRunLobbyClientBeginPatch
+{
+    [HarmonyPriority(Priority.First)]
+    private static bool Prefix(StartRunLobby __instance) =>
+        CompatibilityGate.CanAcceptClientBegin(
+            __instance.NetService,
+            "begin-run message");
+}
+
+[HarmonyPatch(typeof(LoadRunLobby), nameof(LoadRunLobby.SetReady))]
+internal static class LoadRunLobbyReadyPatch
+{
+    [HarmonyPriority(Priority.First)]
+    private static bool Prefix(LoadRunLobby __instance, bool ready)
+    {
+        if (!ready
+            || !CompatibilityGate.IsMultiplayer(__instance.NetService.Type)
+            || CompatibilityGate.CanProceed(out string reason))
+        {
+            return true;
+        }
+
+        CompatibilityGate.ReportBlocked("loaded-run ready", reason);
+        return false;
+    }
+}
+
+[HarmonyPatch(typeof(LoadRunLobby), nameof(LoadRunLobby.IsAboutToBeginGame))]
+internal static class LoadRunLobbyBeginPatch
+{
+    [HarmonyPriority(Priority.Last)]
+    private static void Postfix(LoadRunLobby __instance, ref bool __result)
+    {
+        if (__result
+            && CompatibilityGate.IsMultiplayer(__instance.NetService.Type)
+            && !CompatibilityGate.CanProceed(out string reason))
+        {
+            Main.Log.Warn("Blocked loaded-run begin: " + reason.Replace('\n', ' '));
+            __result = false;
+        }
+    }
+}
+
+[HarmonyPatch]
+internal static class LoadedRunFinalConfirmationPatch
+{
+    private static IEnumerable<MethodBase> TargetMethods()
+    {
+        Type[] listenerTypes =
+        [
+            typeof(NMultiplayerLoadGameScreen),
+            typeof(NDailyRunLoadScreen),
+            typeof(NCustomRunLoadScreen)
+        ];
+
+        foreach (Type listenerType in listenerTypes)
+        {
+            MethodInfo? method = AccessTools.DeclaredMethod(
+                listenerType,
+                nameof(ILoadRunLobbyListener.ShouldAllowRunToBegin),
+                Type.EmptyTypes);
+            yield return method
+                ?? throw new MissingMethodException(
+                    listenerType.FullName,
+                    nameof(ILoadRunLobbyListener.ShouldAllowRunToBegin));
+        }
+    }
+
+    [HarmonyPriority(Priority.Last)]
+    private static void Postfix(ref Task<bool> __result) =>
+        __result = RevalidateAfterConfirmation(__result);
+
+    private static async Task<bool> RevalidateAfterConfirmation(
+        Task<bool> original)
+    {
+        if (!await original)
+        {
+            return false;
+        }
+
+        if (CompatibilityGate.CanProceed(out string reason))
+        {
+            return true;
+        }
+
+        CompatibilityGate.ReportBlocked(
+            "loaded-run final confirmation",
+            reason);
+        return false;
+    }
+}
+
+[HarmonyPatch(
+    typeof(LoadRunLobby),
+    "HandleLobbyBeginRunMessage",
+    [typeof(LobbyBeginLoadedRunMessage), typeof(ulong)])]
+internal static class LoadRunLobbyClientBeginPatch
+{
+    [HarmonyPriority(Priority.First)]
+    private static bool Prefix(LoadRunLobby __instance) =>
+        CompatibilityGate.CanAcceptClientBegin(
+            __instance.NetService,
+            "loaded-run begin message");
 }

@@ -8,5 +8,6 @@
 
   <ItemGroup>
     <Compile Include="../../src/CoopGuard/FingerprintCodec.cs" Link="FingerprintCodec.cs" />
+    <Compile Include="../../src/CoopGuard/PackageHasher.cs" Link="PackageHasher.cs" />
   </ItemGroup>
 </Project>
