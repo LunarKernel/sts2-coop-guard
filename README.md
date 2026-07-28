@@ -60,6 +60,24 @@ path, Steam ID, IP address, credential, save or fingerprint is uploaded or
 sent to peers. Native crashes that terminate Godot before it can create UI
 cannot display an in-game popup.
 
+Every CoopGuard diagnosis popup has a native `Copy diagnosis` / `复制诊断`
+button. It copies a bounded, redacted local report containing the error code,
+game version, connection/run state, package-health counts and the latest eight
+warning/error messages. It never copies a package digest, raw path, Steam ID,
+IP endpoint or credential.
+
+## Health status and manual snapshots
+
+- When a multiplayer player clicks ready and the full local package check
+  passes, STS2 shows its native non-blocking fullscreen text for 0.5 seconds.
+- Press `Ctrl+F8` at any time to run the bounded freshness check and open a
+  local health/soft-lock snapshot. This does not decide that a pause is a
+  soft lock; it records the current evidence for comparison with every peer's
+  matching time window.
+- Snapshot and fatal-error reports remain local until the player explicitly
+  presses the copy button. CoopGuard adds no telemetry or custom network
+  message and does not automatically repair, reload or mutate a run.
+
 CoopGuard does not modify combat, RNG, run or save state, and it never attempts
 to repair divergence. It is a compatibility guard for trusted co-op peers, not
 anti-cheat or remote attestation.
@@ -83,7 +101,7 @@ dotnet build src/CoopGuard/CoopGuard.csproj `
   -c Release -warnaserror `
   -p:Sts2Path="C:\SteamLibrary\steamapps\common\Slay the Spire 2" `
   -p:CreateModPackage=true `
-  -p:PackageDir="C:\path\to\new\v0.3.0-stage"
+  -p:PackageDir="C:\path\to\new\v0.3.1-stage"
 ```
 
 The staging directory must contain exactly:
@@ -108,7 +126,8 @@ checks, reparse-point rejection and the scoped OnlineExchange runtime-data
 rule. It also covers Chinese and English incident text, error classification,
 normal-quit exclusion and diagnostic redaction. It runs on the installed .NET
 10 runtime; the Release build separately compiles the actual Mod for STS2's
-.NET 9 runtime.
+.NET 9 runtime. The copyable-report check also verifies the manual health
+snapshot and rejects Steam IDs, IP endpoints, credentials and absolute paths.
 
 ## Current boundaries
 
@@ -141,10 +160,11 @@ normal-quit exclusion and diagnostic redaction. It runs on the installed .NET
   change makes the next connection or rejoin fail closed, but cannot undo state
   already executed in the current run.
 - Identical package bytes can still contain the same deterministic bug.
-- Version `v0.3.0` is built against STS2 `0.109.1`. Its incident feature has
-  passed the Release build, pure self-check, 18-target Harmony smoke test and
-  isolated English/Chinese native-modal runtime checks. A matching isolated
-  two-client ENet run also joined, readied and embarked. The unchanged
+- Version `v0.3.1` is built against STS2 `0.109.1`. It has passed the Release
+  build, pure self-check, 21-target Harmony smoke test, isolated native-modal
+  button/clipboard checks for a manual snapshot and `StateDivergence`, and a
+  matching two-client ENet run in which both peers showed the ready status and
+  embarked. The unchanged
   remaining gates previously passed full-Mod-set startup, loaded lobbies,
   running-game rejoin handshake, three-player start, mismatch/TOCTOU rejection
   and generated-PCK settlement under local ENet. Real Steam transport remains

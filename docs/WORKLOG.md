@@ -527,3 +527,67 @@ All timestamps use Asia/Taipei (UTC+08:00).
 - Updated draft PR #1 against `main` to describe the full validation hardening
   and fatal-diagnosis scope:
   `https://github.com/LunarKernel/sts2-coop-guard/pull/1`.
+
+### 15:44 - Version 0.3.1 local health and copyable diagnostics
+
+- Reused STS2's native UI instead of adding a PCK or custom scene:
+  - a successful multiplayer ready check now shows
+    `NFullscreenTextVfx` for 0.5 seconds without blocking the lobby;
+  - `Ctrl+F8` runs the existing bounded freshness check and opens a local
+    health/soft-lock evidence snapshot through `NErrorPopup`;
+  - CoopGuard-owned diagnostic popups relabel the native report button to
+    `Copy diagnosis` / `复制诊断` and write the report through Godot's system
+    clipboard API.
+- Associated reports with their owning popups through a standard-library
+  `ConditionalWeakTable`; ordinary STS2 error popups remain unchanged.
+- Copyable reports include the incident code/body, UTC time, game version,
+  connection/run status, package counts/status and the latest eight
+  warning/error messages. Every field is passed through the existing
+  redactor; raw package digests, paths, Steam IDs, IP endpoints and
+  credentials are excluded.
+- Manual snapshots do not declare every pause a soft lock, upload telemetry,
+  add a network message, repair divergence or mutate combat/run/save/RNG
+  state.
+- Bumped the assembly and manifest to `v0.3.1`; the native compatibility wire
+  entry remains version 3 because its format did not change.
+- Validation against STS2 `0.109.1` completed:
+  - final Release build with warnings as errors: zero warnings and errors;
+  - fingerprint/incident self-check passed, including the health report,
+    `Ctrl+F8` instructions and copied-report privacy;
+  - formatting and `git diff --check` passed;
+  - bundled .NET `9.0.7` Harmony smoke patched and removed all 21 expected
+    targets;
+  - a hidden, normally rendered isolated STS2 instance verified the manual
+    health popup, exact `Copy diagnosis` label and a 926-byte clipboard
+    report;
+  - a second isolated rendered run verified the fatal
+    `StateDivergence` popup and a 1,206-byte clipboard report;
+  - matching isolated ENet host/client instances produced the same effective
+    package digest, both displayed the successful ready status, and both
+    embarked on the same multiplayer run.
+- Initial isolated launches intentionally exposed two harness constraints:
+  Steam initialization had to be disabled with the game's own
+  `--force-steam=off`, and a fresh profile had to reuse its isolated
+  already-accepted Mod settings. The headless display server executed the
+  copy handler but cannot read a system clipboard, so clipboard assertions
+  were repeated successfully with hidden normal rendering.
+- Preserved the final two-file candidate at
+  `artifacts/staging/v0.3.1-20260728-1544`:
+  - `CoopGuard.dll`, 107,008 bytes, SHA-256
+    `0ee8ef25395e58d6d5b337ac8967034df799eb87f66da0d75fb2abaf270e791b`;
+  - `CoopGuard.json`, 374 bytes, SHA-256
+    `3dd6ea0f6317b11f7f04c858465a2371f89bb97f6c1cac0f5c3209a82ce8071a`.
+  The assembly version is `0.3.1.0` and the manifest version is `v0.3.1`.
+- No file was installed into the live game, and this version was not uploaded
+  to Workshop or GitHub.
+
+### 16:05 - Version 0.3.1 uploaded to Steam Workshop
+
+- Updated existing private Workshop item `3772631781` in place with Mega
+  Crit's official ModUploader; no duplicate item was created.
+- Uploaded exactly the validated v0.3.1 candidate: 107,008-byte
+  `CoopGuard.dll` and 374-byte `CoopGuard.json` (107,382 bytes total).
+- Published the v0.3.1 health-status, manual snapshot and copyable-diagnostics
+  description/change note while preserving `Hidden` visibility.
+- Preserved the pre-upload workspace at
+  `C:\SteamLibrary\steamapps\sts2-coop-guard-workshop.backup.pre-v0.3.1-20260728-1600`.

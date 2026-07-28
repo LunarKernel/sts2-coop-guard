@@ -195,6 +195,31 @@ Check(
         && !redacted.Contains("C:\\Users", StringComparison.Ordinal),
     "A diagnostic summary leaked identity, network, credential, or path data.");
 
+IncidentText healthy = IncidentExplainer.ExplainHealthy(
+    3,
+    42,
+    1024,
+    chinese: true);
+string report = IncidentExplainer.BuildReport(
+    healthy,
+    "0.109.1",
+    "network=Host; connected=True; runInProgress=True",
+    "verified; mods=3; files=42; bytes=1024",
+    [
+        "warning for 76561198824432109",
+        "token=secret C:\\Users\\name\\save.dat"
+    ],
+    DateTimeOffset.Parse(
+        "2026-07-28T00:00:00Z",
+        System.Globalization.CultureInfo.InvariantCulture));
+Check(
+    report.Contains("[CG-HEALTHY]", StringComparison.Ordinal)
+        && report.Contains("Ctrl+F8", StringComparison.Ordinal)
+        && !report.Contains("76561198824432109", StringComparison.Ordinal)
+        && !report.Contains("secret", StringComparison.Ordinal)
+        && !report.Contains("C:\\Users", StringComparison.Ordinal),
+    "The copyable health report was incomplete or leaked sensitive data.");
+
 string escaped = FingerprintCodec.Line("a|b", "line\r\nbreak", "100%");
 Check(
     escaped == "a%7Cb|line%0D%0Abreak|100%25",

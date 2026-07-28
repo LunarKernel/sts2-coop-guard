@@ -163,9 +163,14 @@ internal static class StartRunLobbyReadyPatch
     private static bool Prefix(StartRunLobby __instance, bool ready)
     {
         if (!ready
-            || !CompatibilityGate.IsMultiplayer(__instance.NetService.Type)
-            || CompatibilityGate.CanProceed(out string reason))
+            || !CompatibilityGate.IsMultiplayer(__instance.NetService.Type))
         {
+            return true;
+        }
+
+        if (CompatibilityGate.CanProceed(out string reason))
+        {
+            FatalIncidentReporter.ShowVerified();
             return true;
         }
 
@@ -210,9 +215,14 @@ internal static class LoadRunLobbyReadyPatch
     private static bool Prefix(LoadRunLobby __instance, bool ready)
     {
         if (!ready
-            || !CompatibilityGate.IsMultiplayer(__instance.NetService.Type)
-            || CompatibilityGate.CanProceed(out string reason))
+            || !CompatibilityGate.IsMultiplayer(__instance.NetService.Type))
         {
+            return true;
+        }
+
+        if (CompatibilityGate.CanProceed(out string reason))
+        {
+            FatalIncidentReporter.ShowVerified();
             return true;
         }
 

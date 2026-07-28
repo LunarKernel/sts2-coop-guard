@@ -256,6 +256,55 @@ internal static class IncidentExplainer
             false);
     }
 
+    public static IncidentText ExplainHealthy(
+        int modCount,
+        int fileCount,
+        long totalBytes,
+        bool chinese) =>
+        Build(
+            "CG-HEALTHY",
+            chinese,
+            "联机校验已通过",
+            "Multiplayer verification passed",
+            "CoopGuard 已确认本机当前加载的 Mod 包与启动时校验结果一致。",
+            "CoopGuard confirmed that the currently loaded local Mod packages still match the startup verification.",
+            $"Mods: {modCount}; files: {fileCount}; bytes: {totalBytes.ToString(CultureInfo.InvariantCulture)}",
+            $"Mods: {modCount}; files: {fileCount}; bytes: {totalBytes.ToString(CultureInfo.InvariantCulture)}",
+            "可继续联机。若疑似卡死，可按 Ctrl+F8 生成一份当前诊断快照。",
+            "Multiplayer may continue. If the run appears stuck, press Ctrl+F8 to create a current diagnostic snapshot.",
+            "已确认",
+            "Confirmed",
+            true);
+
+    public static string BuildReport(
+        IncidentText incident,
+        string gameVersion,
+        string runtimeState,
+        string packageHealth,
+        IReadOnlyList<string> recentLogs,
+        DateTimeOffset capturedAt)
+    {
+        string[] evidence = recentLogs
+            .Reverse()
+            .Take(8)
+            .Reverse()
+            .Select(Redact)
+            .ToArray();
+        return string.Join(
+            '\n',
+            "CoopGuard diagnostic report v0.3.1",
+            $"Captured UTC: {capturedAt.UtcDateTime:O}",
+            $"Game version: {Redact(gameVersion)}",
+            $"Runtime state: {Redact(runtimeState)}",
+            $"Package health: {Redact(packageHealth)}",
+            string.Empty,
+            $"[{incident.Code}] {Redact(incident.Title)}",
+            Redact(incident.Body),
+            string.Empty,
+            "Recent warnings/errors (redacted):",
+            evidence.Length == 0 ? "<none>" : string.Join('\n', evidence));
+    }
+
     public static string Redact(string? input)
     {
         if (string.IsNullOrWhiteSpace(input))
