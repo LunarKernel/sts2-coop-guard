@@ -45,7 +45,7 @@ internal static class SkinManagerMounts
                 "The loaded Sts2SkinManager version is not supported for mounted-PCK verification.");
         }
 
-        VerifyGameBuild();
+        VerifySupportedGameBuild();
 
         Version runtime = Environment.Version;
         if (runtime.Major != 9 || runtime.Minor != 0 || runtime.Build != 7)
@@ -113,7 +113,7 @@ internal static class SkinManagerMounts
         return snapshot;
     }
 
-    private static void VerifyGameBuild()
+    public static void VerifySupportedGameBuild()
     {
         string? dataDirectory = Path.GetDirectoryName(
             typeof(ModManager).Assembly.Location);
@@ -160,7 +160,7 @@ internal static class SkinManagerMounts
             || parsedAssemblyHash != SupportedMainAssemblyHash)
         {
             throw new InvalidDataException(
-                "The current STS2 build is not supported for mounted-PCK verification.");
+                "The current STS2 build is not supported by this CoopGuard version.");
         }
     }
 }

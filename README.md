@@ -26,6 +26,10 @@ https://steamcommunity.com/sharedfiles/filedetails/?id=3772631781
 - CoopGuard appends one fixed package-digest entry to STS2's existing gameplay
   Mod list. STS2's native join check therefore covers fresh lobbies, loaded-run
   lobbies and running-game rejoins before the client enters the session.
+- The native-list sentinel is installed before every other Harmony patch. If a
+  later gameplay or diagnostic patch fails after a game update, the sentinel
+  remains active and emits a process-unique unsafe entry instead of silently
+  claiming that protection is active.
 - Full hashing runs at startup, before each client connection, at local ready
   and host-start gates, and after the loaded-run host's final confirmation.
   Synchronous host-connect and client-begin callbacks use a bounded
@@ -34,6 +38,9 @@ https://steamcommunity.com/sharedfiles/filedetails/?id=3772631781
 - Local hashing errors, STS2-reported Mod load failures, replacement Mods,
   late assemblies and package changes fail closed with one process-stable
   mismatch token.
+- The installed STS2 version, commit and main-assembly hash must match an
+  explicitly tested build even when Skin Manager is not installed. Unknown
+  builds fail closed until CoopGuard is updated.
 
 There is no custom network message. Peers receive only the aggregate digest
 already carried by STS2's native Mod-list handshake—not file contents,
@@ -42,17 +49,21 @@ absolute paths, settings, saves or account data.
 ## Fatal error explanations
 
 CoopGuard replaces STS2's short popup for recognized multiplayer failures with
-an actionable diagnosis. It uses the game's structured failure reason first
-and a bounded in-memory tail of recent warning/error logs only as supporting
-evidence. A normal log `Error` does not trigger a popup by itself.
+an actionable diagnosis. It uses the game's structured failure reason first.
+Only `Error` entries captured during the preceding 30 seconds can refine an
+ambiguous network root cause; older warnings/errors remain report context but
+cannot change the classification. A normal log `Error` does not trigger a
+popup by itself.
 
 Built-in explanations cover state divergence, Mod/package mismatch, transport
 and handshake timeouts, game/data-model mismatch, offline and secure-connection
 failures, hosting/platform errors, missing or unloadable dependencies,
 incompatible Mod APIs, Harmony patch failures, soft-lock exceptions and
-otherwise unknown internal errors. Each popup separates the root cause,
-evidence, confidence and next action. It does not claim that the last action,
-card or stack frame proves one responsible Mod.
+otherwise unknown internal errors. Missing methods, types and dependencies are
+shown after redaction. A Mod is named only when its loaded assembly appears in
+the exception chain; otherwise the popup explicitly says the source is
+unknown. Each popup separates the root cause, evidence, confidence and next
+action.
 
 The popup follows STS2's current language. Simplified or Traditional Chinese
 uses the Chinese text; every other language falls back to English. No log,
@@ -63,17 +74,18 @@ cannot display an in-game popup.
 Every CoopGuard diagnosis popup has a native `Copy diagnosis` / `复制诊断`
 button. It copies a bounded, redacted local report containing the error code,
 game version, connection/run state, package-health counts and the latest eight
-warning/error messages. It never copies a package digest, raw path, Steam ID,
-IP endpoint or credential.
+warning/error messages. It never copies a package digest, SHA-256, raw path,
+Steam ID, IPv4/IPv6 endpoint or common credential form. Copy success or failure
+is shown through STS2's native fullscreen status text.
 
 ## Health status and manual snapshots
 
 - When a multiplayer player clicks ready and the full local package check
   passes, STS2 shows its native non-blocking fullscreen text for 0.5 seconds.
-- Press `Ctrl+F8` at any time to run the bounded freshness check and open a
-  local health/soft-lock snapshot. This does not decide that a pause is a
-  soft lock; it records the current evidence for comparison with every peer's
-  matching time window.
+- Press `Ctrl+F8` at any time to run the bounded metadata freshness check and
+  open a local health/soft-lock snapshot. It checks paths, file lists, sizes
+  and modification times against the full startup fingerprint without
+  rereading every file byte. It does not decide that a pause is a soft lock.
 - Snapshot and fatal-error reports remain local until the player explicitly
   presses the copy button. CoopGuard adds no telemetry or custom network
   message and does not automatically repair, reload or mutate a run.
@@ -101,7 +113,7 @@ dotnet build src/CoopGuard/CoopGuard.csproj `
   -c Release -warnaserror `
   -p:Sts2Path="C:\SteamLibrary\steamapps\common\Slay the Spire 2" `
   -p:CreateModPackage=true `
-  -p:PackageDir="C:\path\to\new\v0.3.1-stage"
+  -p:PackageDir="C:\path\to\new\v0.3.2-stage"
 ```
 
 The staging directory must contain exactly:
@@ -127,7 +139,8 @@ rule. It also covers Chinese and English incident text, error classification,
 normal-quit exclusion and diagnostic redaction. It runs on the installed .NET
 10 runtime; the Release build separately compiles the actual Mod for STS2's
 .NET 9 runtime. The copyable-report check also verifies the manual health
-snapshot and rejects Steam IDs, IP endpoints, credentials and absolute paths.
+snapshot and rejects Steam IDs, IPv4/IPv6 endpoints, credentials, package
+fingerprints, SHA-256 values, UNC paths and other absolute paths.
 
 ## Current boundaries
 
@@ -144,6 +157,9 @@ snapshot and rejects Steam IDs, IP endpoints, credentials and absolute paths.
   registry shape is rejected until reviewed. One guarded settlement pass
   absorbs Skin Manager's zero-delay startup overlays before the fingerprint is
   exposed; a later PCK mount makes the next gate require a restart.
+- Game-build verification is global rather than conditional on Skin Manager.
+  Any version, commit or main-assembly hash that has not passed the complete
+  local matrix blocks modded multiplayer until CoopGuard is updated.
 - One capture is capped at 4,096 files, 16,384 scanned entries, 1 GiB and 8 MiB
   of canonical text across loaded Mods and externally mounted PCKs. Limit
   failures reject multiplayer.
@@ -160,11 +176,11 @@ snapshot and rejects Steam IDs, IP endpoints, credentials and absolute paths.
   change makes the next connection or rejoin fail closed, but cannot undo state
   already executed in the current run.
 - Identical package bytes can still contain the same deterministic bug.
-- Version `v0.3.1` is built against STS2 `0.109.1`. It has passed the Release
+- Version `v0.3.2` is built against STS2 `0.109.1`. It has passed the Release
   build, pure self-check, 21-target Harmony smoke test, isolated native-modal
-  button/clipboard checks for a manual snapshot and `StateDivergence`, and a
-  matching two-client ENet run in which both peers showed the ready status and
-  embarked. The unchanged
+  button/clipboard checks for a manual snapshot and an internal
+  `MissingMethodException`, and a matching two-client ENet run in which both
+  peers showed the ready status and embarked. The unchanged
   remaining gates previously passed full-Mod-set startup, loaded lobbies,
   running-game rejoin handshake, three-player start, mismatch/TOCTOU rejection
   and generated-PCK settlement under local ENet. Real Steam transport remains

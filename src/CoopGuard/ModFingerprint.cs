@@ -30,11 +30,11 @@ internal static class ModFingerprint
     private const long MaxTotalBytes = 1024L * 1024 * 1024;
     private const int MaxCanonicalCharacters = 8 * 1024 * 1024;
     private const int MaxTotalEntries = 16_384;
-    private const string CompatibilityPrefix = "CoopGuard-package-v3-";
-
     private static readonly object CaptureLock = new();
     private static readonly string UnsafeCompatibilityEntry =
-        CompatibilityPrefix + "error-" + Guid.NewGuid().ToString("N");
+        FingerprintCodec.CompatibilityPrefix
+        + "error-"
+        + Guid.NewGuid().ToString("N");
 
     private static FingerprintSnapshot? _baseline;
     private static FingerprintSnapshot? _lastFailure;
@@ -74,8 +74,9 @@ internal static class ModFingerprint
 
             if (_restartRequired)
             {
-                return Failure(
-                    "Mod packages changed after startup. Restart the game before multiplayer.");
+                return _lastFailure
+                    ?? Failure(
+                        "Mod packages changed after startup. Restart the game before multiplayer.");
             }
 
             FingerprintSnapshot current = CaptureSafely();
@@ -171,8 +172,9 @@ internal static class ModFingerprint
 
             if (_restartRequired)
             {
-                return Failure(
-                    "Mod packages changed after startup. Restart the game before multiplayer.");
+                return _lastFailure
+                    ?? Failure(
+                        "Mod packages changed after startup. Restart the game before multiplayer.");
             }
 
             if (_lastFailure != null)
@@ -237,8 +239,19 @@ internal static class ModFingerprint
         {
             _compatibilityEntryIssued = true;
             return !_restartRequired && _baseline != null && _lastFailure == null
-                ? CompatibilityPrefix + _baseline.Digest
+                ? FingerprintCodec.CompatibilityPrefix + _baseline.Digest
                 : UnsafeCompatibilityEntry;
+        }
+    }
+
+    public static void MarkInitializationFailure(Exception exception)
+    {
+        lock (CaptureLock)
+        {
+            _restartRequired = true;
+            _lastFailure = Failure(
+                "CoopGuard could not install its required multiplayer patches "
+                    + $"({exception.GetType().Name}).");
         }
     }
 
@@ -288,7 +301,8 @@ internal static class ModFingerprint
         catch (Exception ex)
         {
             Main.Log.Error($"Unexpected package fingerprint failure: {ex}");
-            return Failure($"Package fingerprint failed ({ex.GetType().Name}).");
+            return Failure(
+                $"Package fingerprint failed: {ex.Message} ({ex.GetType().Name}).");
         }
     }
 
@@ -310,6 +324,8 @@ internal static class ModFingerprint
         {
             errors.Add("The game Mod manager is not fully initialized.");
         }
+
+        SkinManagerMounts.VerifySupportedGameBuild();
 
         foreach (Mod failed in ModManager.Mods.Where(mod =>
                      mod.state == ModLoadState.Failed

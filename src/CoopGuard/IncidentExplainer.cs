@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using System.Text.RegularExpressions;
 
 namespace CoopGuard;
@@ -11,8 +12,6 @@ internal sealed record IncidentText(
 
 internal static class IncidentExplainer
 {
-    private const string FingerprintPrefix = "CoopGuard-package-v3-";
-
     public static IncidentText? ExplainNetwork(
         string reason,
         IReadOnlyList<string> missingOnHost,
@@ -21,8 +20,13 @@ internal static class IncidentExplainer
         IReadOnlyList<string> recentLogs,
         bool chinese)
     {
-        bool packageBytesDiffer = missingOnHost.Any(IsFingerprintEntry)
-            || missingOnLocal.Any(IsFingerprintEntry);
+        bool fingerprintMissingOnHost = missingOnHost.Any(IsFingerprintEntry);
+        bool fingerprintMissingOnLocal = missingOnLocal.Any(IsFingerprintEntry);
+        bool failureMissingOnHost = missingOnHost.Any(IsFailureEntry);
+        bool failureMissingOnLocal = missingOnLocal.Any(IsFailureEntry);
+        bool incompatibleProtocol = missingOnHost
+                .Concat(missingOnLocal)
+                .Any(IsOtherProtocolEntry);
         string[] hostMods = SafeModNames(missingOnHost);
         string[] localMods = SafeModNames(missingOnLocal);
 
@@ -30,7 +34,11 @@ internal static class IncidentExplainer
         {
             "StateDivergence" => StateDivergence(chinese),
             "ModMismatch" => ModMismatch(
-                packageBytesDiffer,
+                fingerprintMissingOnHost,
+                fingerprintMissingOnLocal,
+                failureMissingOnHost,
+                failureMissingOnLocal,
+                incompatibleProtocol,
                 hostMods,
                 localMods,
                 chinese),
@@ -52,11 +60,16 @@ internal static class IncidentExplainer
         string exceptionType,
         string? suspectMod,
         string? dependency,
+        string? detail,
         bool chinese)
     {
         string safeMod = SafeLabel(suspectMod);
         string safeDependency = SafeLabel(dependency);
-        string evidence = ExceptionEvidence(exceptionType, safeMod, chinese);
+        string evidence = ExceptionEvidence(
+            exceptionType,
+            safeMod,
+            SafeLabel(detail),
+            chinese);
 
         if (exceptionType.Contains("StateDivergence", StringComparison.Ordinal))
         {
@@ -83,43 +96,65 @@ internal static class IncidentExplainer
 
         if (IsApiCompatibilityException(exceptionType))
         {
+            bool attributed = !string.IsNullOrEmpty(safeMod);
             return Build(
                 "CG-MOD-API-INCOMPATIBLE",
                 chinese,
-                "Mod 与当前游戏 API 不兼容",
-                "Mod is incompatible with the current game API",
-                "某段 Mod 代码引用了当前版本中不存在或签名已经变化的类型、方法或成员。",
-                "Mod code referenced a type, method, or member that is missing or has a different signature in this game version.",
+                attributed
+                    ? "Mod 与当前游戏 API 不兼容"
+                    : "程序集或 API 版本不兼容",
+                attributed
+                    ? "Mod is incompatible with the current game API"
+                    : "Assembly or API version mismatch",
+                attributed
+                    ? $"Mod“{safeMod}”的代码引用了当前版本中不存在或签名已经变化的类型、方法或成员。"
+                    : "某个程序集引用了当前版本中不存在或签名已经变化的类型、方法或成员；现有证据无法确定它属于游戏本体还是第三方 Mod。",
+                attributed
+                    ? $"Mod \"{safeMod}\" referenced a type, method, or member that is missing or has a different signature in this game version."
+                    : "An assembly referenced a type, method, or member that is missing or has a different signature. Current evidence cannot attribute it to the base game or a third-party Mod.",
                 evidence,
                 evidence,
-                "更新相关 Mod；若没有更新，停用它并重启游戏。不要继续原联机局。",
-                "Update the related Mod. If no update exists, disable it and restart the game. Do not continue the affected multiplayer run.",
-                "已确认",
-                "Confirmed",
+                attributed
+                    ? "更新该 Mod；若没有更新，双方停用它并重启游戏。不要继续原联机局。"
+                    : "确认游戏与所有 Mod 均为同一最新版本；保存报告后通过无 Mod 新局隔离来源。",
+                attributed
+                    ? "Update that Mod. If no update exists, disable it on every peer and restart. Do not continue the affected run."
+                    : "Make the game and every Mod the same current version, keep this report, then use a fresh no-Mod run to isolate the source.",
+                attributed ? "已确认" : "根因已确认，来源未确定",
+                attributed ? "Confirmed" : "Cause confirmed; source unknown",
                 true);
         }
 
         if (IsDependencyException(exceptionType))
         {
+            bool attributed = !string.IsNullOrEmpty(safeMod);
             string causeZh = string.IsNullOrEmpty(safeDependency)
-                ? "Mod 所需的程序集无法加载；文件可能缺失、损坏、版本错误或架构不兼容。"
-                : $"Mod 所需的程序集“{safeDependency}”无法加载；文件可能缺失、损坏、版本错误或架构不兼容。";
+                ? "所需程序集无法加载；文件可能缺失、损坏、版本错误或架构不兼容。"
+                : $"所需程序集“{safeDependency}”无法加载；文件可能缺失、损坏、版本错误或架构不兼容。";
             string causeEn = string.IsNullOrEmpty(safeDependency)
-                ? "A required Mod assembly could not be loaded. It may be missing, damaged, the wrong version, or built for an incompatible architecture."
-                : $"Required Mod assembly \"{safeDependency}\" could not be loaded. It may be missing, damaged, the wrong version, or built for an incompatible architecture.";
+                ? "A required assembly could not be loaded. It may be missing, damaged, the wrong version, or built for an incompatible architecture."
+                : $"Required assembly \"{safeDependency}\" could not be loaded. It may be missing, damaged, the wrong version, or built for an incompatible architecture.";
             return Build(
                 "CG-MOD-DEPENDENCY",
                 chinese,
-                "Mod 依赖缺失或无法加载",
-                "Mod dependency is missing or cannot be loaded",
+                attributed
+                    ? "Mod 依赖缺失或无法加载"
+                    : "程序集依赖缺失或无法加载",
+                attributed
+                    ? "Mod dependency is missing or cannot be loaded"
+                    : "Assembly dependency is missing or cannot be loaded",
                 causeZh,
                 causeEn,
                 evidence,
                 evidence,
-                "重新安装或更新相关 Mod 及其依赖，确认所有玩家使用相同版本后重启游戏。",
-                "Reinstall or update the related Mod and its dependencies, make every peer use the same versions, then restart the game.",
-                "已确认",
-                "Confirmed",
+                attributed
+                    ? $"重新安装或更新 Mod“{safeMod}”及其依赖，确认所有玩家使用相同版本后重启游戏。"
+                    : "验证游戏文件，更新所有 Mod 与依赖；若仍出现，通过无 Mod 新局隔离来源。",
+                attributed
+                    ? $"Reinstall or update Mod \"{safeMod}\" and its dependencies, make every peer use the same versions, then restart."
+                    : "Verify the game files and update every Mod and dependency. If it remains, use a fresh no-Mod run to isolate the source.",
+                attributed ? "已确认" : "根因已确认，来源未确定",
+                attributed ? "Confirmed" : "Cause confirmed; source unknown",
                 true);
         }
 
@@ -175,6 +210,32 @@ internal static class IncidentExplainer
         string actionEn;
 
         if (ContainsAny(
+                detail,
+                "required multiplayer patches",
+                "patch installation failed"))
+        {
+            code = "CG-GUARD-INITIALIZATION-FAILED";
+            titleZh = "CoopGuard 核心补丁安装失败";
+            titleEn = "CoopGuard core patch installation failed";
+            causeZh = "CoopGuard 无法安全安装当前游戏版本所需的联机保护补丁，因此已经禁用本次联机校验结果。";
+            causeEn = "CoopGuard could not safely install the multiplayer protection patches required by this game build, so this session's verification result was disabled.";
+            actionZh = "退出游戏，更新 CoopGuard；若尚无兼容版本，请等待更新后再进行 Mod 联机。";
+            actionEn = "Exit the game and update CoopGuard. If no compatible build exists yet, wait for an update before playing modded multiplayer.";
+        }
+        else if (ContainsAny(
+                     detail,
+                     "STS2 build is not supported",
+                     "release metadata could not be verified"))
+        {
+            code = "CG-UNSUPPORTED-GAME-BUILD";
+            titleZh = "当前游戏版本尚未通过 CoopGuard 验证";
+            titleEn = "This game build is not yet verified by CoopGuard";
+            causeZh = "当前 STS2 版本、commit 或主程序集哈希不在 CoopGuard 已测试的构建列表中。";
+            causeEn = "The current STS2 version, commit, or main assembly hash is not in CoopGuard's tested build list.";
+            actionZh = "不要继续 Mod 联机；更新 CoopGuard，或等待作者完成当前游戏版本的兼容性测试。";
+            actionEn = "Do not continue modded multiplayer. Update CoopGuard or wait until this game build has been compatibility-tested.";
+        }
+        else if (ContainsAny(
                 detail,
                 "changed after startup",
                 "changed while",
@@ -264,10 +325,10 @@ internal static class IncidentExplainer
         Build(
             "CG-HEALTHY",
             chinese,
-            "联机校验已通过",
-            "Multiplayer verification passed",
-            "CoopGuard 已确认本机当前加载的 Mod 包与启动时校验结果一致。",
-            "CoopGuard confirmed that the currently loaded local Mod packages still match the startup verification.",
+            "快速文件新鲜度检查通过",
+            "Quick file freshness check passed",
+            "CoopGuard 已确认 Mod 路径、文件列表、大小和修改时间仍与完整启动指纹一致；本次快照没有重新读取全部文件内容。",
+            "CoopGuard confirmed that Mod paths, file lists, sizes, and modification times still match the full startup fingerprint. This snapshot did not reread every file byte.",
             $"Mods: {modCount}; files: {fileCount}; bytes: {totalBytes.ToString(CultureInfo.InvariantCulture)}",
             $"Mods: {modCount}; files: {fileCount}; bytes: {totalBytes.ToString(CultureInfo.InvariantCulture)}",
             "可继续联机。若疑似卡死，可按 Ctrl+F8 生成一份当前诊断快照。",
@@ -284,6 +345,11 @@ internal static class IncidentExplainer
         IReadOnlyList<string> recentLogs,
         DateTimeOffset capturedAt)
     {
+        Version? assemblyVersion =
+            typeof(IncidentExplainer).Assembly.GetName().Version;
+        string coopGuardVersion = assemblyVersion == null
+            ? "unavailable"
+            : $"{assemblyVersion.Major}.{assemblyVersion.Minor}.{assemblyVersion.Build}";
         string[] evidence = recentLogs
             .Reverse()
             .Take(8)
@@ -292,7 +358,9 @@ internal static class IncidentExplainer
             .ToArray();
         return string.Join(
             '\n',
-            "CoopGuard diagnostic report v0.3.1",
+            "CoopGuard diagnostic report",
+            $"CoopGuard version: {coopGuardVersion}",
+            "Report format: 1",
             $"Captured UTC: {capturedAt.UtcDateTime:O}",
             $"Game version: {Redact(gameVersion)}",
             $"Runtime state: {Redact(runtimeState)}",
@@ -315,6 +383,16 @@ internal static class IncidentExplainer
         string value = input.Replace('\r', ' ').Replace('\0', ' ');
         value = Regex.Replace(
             value,
+            @"CoopGuard-package-v\d+-[A-Za-z0-9-]+",
+            "<package-fingerprint>",
+            RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+        value = Regex.Replace(
+            value,
+            @"\b[A-Fa-f0-9]{64}\b",
+            "<sha256>",
+            RegexOptions.CultureInvariant);
+        value = Regex.Replace(
+            value,
             @"\b7656119\d{10}\b",
             "<steam-id>",
             RegexOptions.CultureInvariant);
@@ -323,10 +401,21 @@ internal static class IncidentExplainer
             @"(?<![\d.])(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?(?![\d.])",
             "<ip>",
             RegexOptions.CultureInvariant);
+        value = RedactIpv6(value);
         value = Regex.Replace(
             value,
-            @"(?i)\b(?:token|ticket|auth|key)=\S+",
+            @"(?i)\b(?:authorization\s*[:=]\s*)?bearer\s+[A-Za-z0-9._~+/=-]+",
             "<credential>",
+            RegexOptions.CultureInvariant);
+        value = Regex.Replace(
+            value,
+            @"(?i)(?:[""']?(?:token|ticket|auth|authorization|api[_-]?key|secret|password)[""']?\s*[:=]\s*)[""']?[^,\s}""']+",
+            "<credential>",
+            RegexOptions.CultureInvariant);
+        value = Regex.Replace(
+            value,
+            @"\\\\[^\s\\/:""<>|]+\\[^\s""<>|]+",
+            "<path>",
             RegexOptions.CultureInvariant);
         value = Regex.Replace(
             value,
@@ -356,11 +445,74 @@ internal static class IncidentExplainer
             true);
 
     private static IncidentText ModMismatch(
-        bool packageBytesDiffer,
+        bool fingerprintMissingOnHost,
+        bool fingerprintMissingOnLocal,
+        bool failureMissingOnHost,
+        bool failureMissingOnLocal,
+        bool incompatibleProtocol,
         IReadOnlyList<string> missingOnHost,
         IReadOnlyList<string> missingOnLocal,
         bool chinese)
     {
+        if (fingerprintMissingOnHost != fingerprintMissingOnLocal
+            || incompatibleProtocol)
+        {
+            return Build(
+                "CG-COOPGUARD-MISSING",
+                chinese,
+                "有玩家未安装同版 CoopGuard",
+                "A peer is missing the same CoopGuard version",
+                "只有一侧提供了 CoopGuard 兼容性条目，说明某位玩家没有安装 CoopGuard，或使用了不兼容的协议版本。",
+                "Only one side supplied a CoopGuard compatibility entry. A peer is missing CoopGuard or uses an incompatible protocol version.",
+                incompatibleProtocol
+                    ? "双方提供了不同协议版本的 CoopGuard 条目。"
+                    : fingerprintMissingOnHost
+                        ? "主机缺少本机提供的 CoopGuard 条目。"
+                        : "本机缺少主机提供的 CoopGuard 条目。",
+                incompatibleProtocol
+                    ? "The peers supplied different CoopGuard protocol versions."
+                    : fingerprintMissingOnHost
+                        ? "The host is missing the CoopGuard entry supplied locally."
+                        : "The local client is missing the CoopGuard entry supplied by the host.",
+                "所有玩家安装同一个 CoopGuard 版本，完全退出并重启游戏后重新创建房间。",
+                "Install the same CoopGuard version on every peer, fully exit and restart the game, then create a new lobby.",
+                "已确认",
+                "Confirmed",
+                false);
+        }
+
+        if (failureMissingOnHost || failureMissingOnLocal)
+        {
+            string sideZh = (failureMissingOnHost, failureMissingOnLocal) switch
+            {
+                (true, true) => "主机和本机都返回了本地校验失败令牌。",
+                (true, false) => "本机返回了本地校验失败令牌。",
+                _ => "主机返回了本地校验失败令牌。"
+            };
+            string sideEn = (failureMissingOnHost, failureMissingOnLocal) switch
+            {
+                (true, true) => "Both the host and local client returned local verification failure tokens.",
+                (true, false) => "The local client returned a local verification failure token.",
+                _ => "The host returned a local verification failure token."
+            };
+            return Build(
+                "CG-PEER-VERIFY-FAILED",
+                chinese,
+                "至少一名玩家的 CoopGuard 本地校验失败",
+                "A peer failed CoopGuard local verification",
+                "这不是已经确认的 Mod 包字节差异；至少一侧无法生成可信指纹，例如游戏版本未验证、补丁安装失败、Mod 加载失败或文件正在变化。",
+                "This is not a confirmed package-byte difference. At least one side could not create a trustworthy fingerprint because of an unverified game build, patch failure, Mod load failure, or changing files.",
+                sideZh,
+                sideEn,
+                "校验失败的一方查看自己的 CoopGuard 本地弹窗并按其提示修复；所有玩家重启后再创建房间。",
+                "The failing peer should follow its local CoopGuard popup. Restart every peer before creating another lobby.",
+                "已确认",
+                "Confirmed",
+                false);
+        }
+
+        bool packageBytesDiffer =
+            fingerprintMissingOnHost && fingerprintMissingOnLocal;
         string evidenceZh;
         string evidenceEn;
         if (missingOnHost.Count > 0 || missingOnLocal.Count > 0)
@@ -501,7 +653,12 @@ internal static class IncidentExplainer
         string? exception = FindKnownException(logs);
         if (exception != null)
         {
-            IncidentText explained = ExplainException(exception, null, null, chinese);
+            IncidentText explained = ExplainException(
+                exception,
+                null,
+                null,
+                null,
+                chinese);
             string evidence = chinese
                 ? $"网络终止前的最近日志包含 {exception}；这是高概率关联证据，不等同于已经证明唯一责任 Mod。\n{Redact(detail)}"
                 : $"Recent logs before the network failure contain {exception}. This is strongly related evidence, not proof of one uniquely responsible Mod.\n{Redact(detail)}";
@@ -622,19 +779,25 @@ internal static class IncidentExplainer
     private static string ExceptionEvidence(
         string exceptionType,
         string safeMod,
+        string safeDetail,
         bool chinese)
     {
         string type = SafeLabel(exceptionType);
+        string detail = string.IsNullOrEmpty(safeDetail)
+            ? string.Empty
+            : chinese
+                ? $"\n异常详情：{safeDetail}"
+                : $"\nException detail: {safeDetail}";
         if (string.IsNullOrEmpty(safeMod))
         {
             return chinese
-                ? $"异常类型：{type}\n没有找到可可靠归属的第三方 Mod 程序集。"
-                : $"Exception type: {type}\nNo third-party Mod assembly could be attributed reliably.";
+                ? $"异常类型：{type}{detail}\n没有找到可可靠归属的第三方 Mod 程序集。"
+                : $"Exception type: {type}{detail}\nNo third-party Mod assembly could be attributed reliably.";
         }
 
         return chinese
-            ? $"异常类型：{type}\n首个明确的第三方程序集属于：{safeMod}"
-            : $"Exception type: {type}\nFirst clearly identified third-party assembly: {safeMod}";
+            ? $"异常类型：{type}{detail}\n首个明确的第三方程序集属于：{safeMod}"
+            : $"Exception type: {type}{detail}\nFirst clearly identified third-party assembly: {safeMod}";
     }
 
     private static string? FindKnownException(IReadOnlyList<string> logs)
@@ -682,7 +845,20 @@ internal static class IncidentExplainer
             value.Contains(needle, StringComparison.OrdinalIgnoreCase));
 
     private static bool IsFingerprintEntry(string value) =>
-        value.StartsWith(FingerprintPrefix, StringComparison.Ordinal);
+        value.StartsWith(
+            FingerprintCodec.CompatibilityFamilyPrefix,
+            StringComparison.Ordinal);
+
+    private static bool IsFailureEntry(string value) =>
+        value.StartsWith(
+            FingerprintCodec.CompatibilityPrefix + "error-",
+            StringComparison.Ordinal);
+
+    private static bool IsOtherProtocolEntry(string value) =>
+        IsFingerprintEntry(value)
+        && !value.StartsWith(
+            FingerprintCodec.CompatibilityPrefix,
+            StringComparison.Ordinal);
 
     private static string[] SafeModNames(IEnumerable<string> values) =>
         values
@@ -703,4 +879,34 @@ internal static class IncidentExplainer
         string safe = Redact(value).Replace('\n', ' ');
         return safe.Length <= 100 ? safe : safe[..97] + "...";
     }
+
+    private static string RedactIpv6(string value) =>
+        Regex.Replace(
+            value,
+            @"(?<![A-Za-z0-9])(?:\[[0-9A-Fa-f:.%]+\](?::\d+)?|[0-9A-Fa-f:%]{2,})(?![A-Za-z0-9])",
+            match =>
+            {
+                string candidate = match.Value;
+                if (candidate.StartsWith("[", StringComparison.Ordinal))
+                {
+                    int close = candidate.IndexOf(']');
+                    candidate = close > 0
+                        ? candidate[1..close]
+                        : candidate;
+                }
+
+                int zone = candidate.IndexOf('%');
+                if (zone > 0)
+                {
+                    candidate = candidate[..zone];
+                }
+
+                return candidate.Contains(':')
+                    && IPAddress.TryParse(candidate, out IPAddress? address)
+                    && address.AddressFamily
+                        == System.Net.Sockets.AddressFamily.InterNetworkV6
+                    ? "<ip>"
+                    : match.Value;
+            },
+            RegexOptions.CultureInvariant);
 }

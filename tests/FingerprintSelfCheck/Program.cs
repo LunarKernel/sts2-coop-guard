@@ -74,8 +74,8 @@ Check(
 
 IncidentText byteMismatch = IncidentExplainer.ExplainNetwork(
     "ModMismatch",
-    ["CoopGuard-package-v3-aaaaaaaa"],
-    ["CoopGuard-package-v3-bbbbbbbb"],
+    [FingerprintCodec.CompatibilityPrefix + "aaaaaaaa"],
+    [FingerprintCodec.CompatibilityPrefix + "bbbbbbbb"],
     "ModMismatch",
     [],
     chinese: true)
@@ -85,6 +85,45 @@ Check(
         && byteMismatch.Body.Contains("有效包内容指纹不同", StringComparison.Ordinal)
         && !byteMismatch.Body.Contains("aaaaaaaa", StringComparison.Ordinal),
     "Package-byte mismatch details were missing or leaked a fingerprint.");
+
+IncidentText missingGuard = IncidentExplainer.ExplainNetwork(
+    "ModMismatch",
+    [FingerprintCodec.CompatibilityPrefix + "aaaaaaaa"],
+    [],
+    "ModMismatch",
+    [],
+    chinese: true)
+    ?? throw new InvalidOperationException("A missing CoopGuard peer was not explained.");
+Check(
+    missingGuard.Code == "CG-COOPGUARD-MISSING"
+        && missingGuard.Body.Contains("所有玩家安装同一个", StringComparison.Ordinal),
+    "A missing CoopGuard peer was confused with a package-byte mismatch.");
+
+IncidentText incompatibleGuard = IncidentExplainer.ExplainNetwork(
+    "ModMismatch",
+    [FingerprintCodec.CompatibilityPrefix + "aaaaaaaa"],
+    [FingerprintCodec.CompatibilityFamilyPrefix + "4-bbbbbbbb"],
+    "ModMismatch",
+    [],
+    chinese: false)
+    ?? throw new InvalidOperationException("An incompatible CoopGuard protocol was not explained.");
+Check(
+    incompatibleGuard.Code == "CG-COOPGUARD-MISSING"
+        && incompatibleGuard.Body.Contains("different CoopGuard protocol", StringComparison.Ordinal),
+    "An incompatible CoopGuard protocol was confused with package bytes.");
+
+IncidentText localVerificationFailure = IncidentExplainer.ExplainNetwork(
+    "ModMismatch",
+    [FingerprintCodec.CompatibilityPrefix + "error-local"],
+    [FingerprintCodec.CompatibilityPrefix + "healthy-host"],
+    "ModMismatch",
+    [],
+    chinese: true)
+    ?? throw new InvalidOperationException("A peer verification failure was not explained.");
+Check(
+    localVerificationFailure.Code == "CG-PEER-VERIFY-FAILED"
+        && localVerificationFailure.Body.Contains("本机返回", StringComparison.Ordinal),
+    "A local verification failure was confused with a package-byte mismatch.");
 
 IncidentText modSetMismatch = IncidentExplainer.ExplainNetwork(
     "ModMismatch",
@@ -162,6 +201,7 @@ foreach ((string exceptionType, string code) in exceptionCases)
         exceptionType,
         "FixtureMod",
         "FixtureDependency.dll",
+        "MegaAnimationState.SetAnimation changed",
         chinese: false);
     Check(
         incident.Code == code
@@ -169,12 +209,40 @@ foreach ((string exceptionType, string code) in exceptionCases)
         $"{exceptionType} was not mapped to its expected root cause.");
 }
 
+IncidentText unattributedApi = IncidentExplainer.ExplainException(
+    "MissingMethodException",
+    null,
+    null,
+    "Missing MegaAnimationState.SetAnimation",
+    chinese: false);
+Check(
+    unattributedApi.Code == "CG-MOD-API-INCOMPATIBLE"
+        && unattributedApi.Title.Contains("Assembly or API", StringComparison.Ordinal)
+        && unattributedApi.Body.Contains(
+            "source unknown",
+            StringComparison.OrdinalIgnoreCase)
+        && unattributedApi.Body.Contains(
+            "MegaAnimationState.SetAnimation",
+            StringComparison.Ordinal),
+    "An unattributed API failure blamed a Mod or hid the missing member.");
+
 IncidentText changedFiles = IncidentExplainer.ExplainLocalVerification(
     "A Mod package changed after startup. Restart the game before multiplayer.",
     chinese: true);
 Check(
     changedFiles.Code == "CG-LOCAL-FILES-CHANGED",
     "A changed local package was not given its specific root cause.");
+
+Check(
+    IncidentExplainer.ExplainLocalVerification(
+        "Package fingerprint failed: The current STS2 build is not supported by this CoopGuard version.",
+        chinese: false).Code == "CG-UNSUPPORTED-GAME-BUILD",
+    "An unsupported game build did not receive its specific diagnosis.");
+Check(
+    IncidentExplainer.ExplainLocalVerification(
+        "CoopGuard could not install its required multiplayer patches (MissingMethodException).",
+        chinese: false).Code == "CG-GUARD-INITIALIZATION-FAILED",
+    "A guard initialization failure did not receive its specific diagnosis.");
 
 Check(
     IncidentExplainer.ExplainNetwork(
@@ -187,12 +255,24 @@ Check(
     "A normal quit was incorrectly converted into a fatal diagnosis.");
 
 string redacted = IncidentExplainer.Redact(
-    "76561198824432109 127.0.0.1:1234 token=secret C:\\Users\\name\\save.dat");
+    "76561198824432109 127.0.0.1:1234 [2001:db8::1]:443 "
+        + "token=secret \"password\":\"json-secret\" "
+        + "Authorization: Bearer bearer-secret "
+        + "C:\\Users\\name\\save.dat \\\\server\\share\\save.dat "
+        + FingerprintCodec.CompatibilityPrefix
+        + "aaaaaaaa "
+        + new string('b', 64));
 Check(
     !redacted.Contains("76561198824432109", StringComparison.Ordinal)
         && !redacted.Contains("127.0.0.1", StringComparison.Ordinal)
+        && !redacted.Contains("2001:db8", StringComparison.Ordinal)
         && !redacted.Contains("secret", StringComparison.Ordinal)
-        && !redacted.Contains("C:\\Users", StringComparison.Ordinal),
+        && !redacted.Contains("C:\\Users", StringComparison.Ordinal)
+        && !redacted.Contains("\\\\server", StringComparison.Ordinal)
+        && !redacted.Contains(
+            FingerprintCodec.CompatibilityPrefix,
+            StringComparison.Ordinal)
+        && !redacted.Contains(new string('b', 64), StringComparison.Ordinal),
     "A diagnostic summary leaked identity, network, credential, or path data.");
 
 IncidentText healthy = IncidentExplainer.ExplainHealthy(
@@ -204,7 +284,7 @@ string report = IncidentExplainer.BuildReport(
     healthy,
     "0.109.1",
     "network=Host; connected=True; runInProgress=True",
-    "verified; mods=3; files=42; bytes=1024",
+    "quick freshness passed; mods=3; files=42; bytes=1024; full bytes not reread",
     [
         "warning for 76561198824432109",
         "token=secret C:\\Users\\name\\save.dat"
@@ -214,7 +294,9 @@ string report = IncidentExplainer.BuildReport(
         System.Globalization.CultureInfo.InvariantCulture));
 Check(
     report.Contains("[CG-HEALTHY]", StringComparison.Ordinal)
+        && report.Contains("Report format: 1", StringComparison.Ordinal)
         && report.Contains("Ctrl+F8", StringComparison.Ordinal)
+        && healthy.Body.Contains("没有重新读取全部文件", StringComparison.Ordinal)
         && !report.Contains("76561198824432109", StringComparison.Ordinal)
         && !report.Contains("secret", StringComparison.Ordinal)
         && !report.Contains("C:\\Users", StringComparison.Ordinal),

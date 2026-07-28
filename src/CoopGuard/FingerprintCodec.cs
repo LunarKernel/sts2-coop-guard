@@ -6,6 +6,11 @@ namespace CoopGuard;
 
 public static class FingerprintCodec
 {
+    public const int ProtocolVersion = 3;
+    public const string CompatibilityFamilyPrefix = "CoopGuard-package-v";
+    public static readonly string CompatibilityPrefix =
+        CompatibilityFamilyPrefix + ProtocolVersion.ToString(CultureInfo.InvariantCulture) + "-";
+
     public static string Line(params object?[] fields) =>
         string.Join('|', fields.Select(field =>
             Escape(Convert.ToString(field, CultureInfo.InvariantCulture) ?? string.Empty)));

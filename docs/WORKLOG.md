@@ -591,3 +591,63 @@ All timestamps use Asia/Taipei (UTC+08:00).
   description/change note while preserving `Hidden` visibility.
 - Preserved the pre-upload workspace at
   `C:\SteamLibrary\steamapps\sts2-coop-guard-workshop.backup.pre-v0.3.1-20260728-1600`.
+
+### 17:53 - Version 0.3.2 fail-closed and diagnosis hardening
+
+- Installed the native gameplay-Mod-list sentinel before every other Harmony
+  patch. If any later required patch fails, the sentinel remains active and
+  emits a process-unique unsafe entry so multiplayer rejects the session
+  instead of silently running without complete protection.
+- Applied the exact tested STS2 build tuple check to every full fingerprint,
+  not only the optional SkinManager path. This build supports STS2 `v0.109.1`,
+  commit `c8c577f6`, main assembly hash `195020890`; an unknown build fails
+  closed with a specific local explanation.
+- Kept wire protocol 3 and added a shared protocol-family prefix so a missing
+  CoopGuard peer, a different CoopGuard protocol and a peer-local verification
+  failure are distinguished from a confirmed effective-package byte mismatch.
+- Limited log-based refinement of ambiguous network failures to error-level
+  entries captured in the previous 30 seconds. Pending managed exceptions
+  expire after five seconds, and Mod/dependency attribution now examines inner,
+  aggregate and reflection loader exceptions.
+- Added exact but redacted exception details, source-unknown wording where no
+  third-party assembly can be attributed, dynamic CoopGuard report versioning
+  and explicit wording that `Ctrl+F8` performs a bounded metadata freshness
+  check rather than rereading every byte.
+- Expanded report redaction to current/future CoopGuard fingerprints, generic
+  SHA-256 values, IPv6 endpoints, bearer/common credentials and UNC paths.
+  No telemetry, custom network message, dependency or new configuration was
+  added.
+- Bumped the assembly and manifest to `v0.3.2`; protocol 3 is unchanged.
+- Validation against STS2 `0.109.1` completed:
+  - final Release build with warnings as errors: zero warnings and errors;
+  - fingerprint/incident self-check passed, including missing/different guard
+    protocols, peer verification failures, unsupported builds, unknown API
+    source wording, report versioning and expanded privacy probes;
+  - formatting verification and `git diff --check` passed;
+  - bundled .NET `9.0.7` Harmony smoke patched and removed all 21 expected
+    targets, proved a post-sentinel patch failure remains fail-closed and
+    verified the exact game build tuple;
+  - hidden normally rendered isolated runs verified the manual-health popup,
+    clipboard report and an internal `MissingMethodException` report with the
+    exact missing API but no unsupported Mod attribution;
+  - matching isolated ENet host/client instances produced digest
+    `ea1e57d38ae0e76b62c95c1e4788c668a87b06b56db5a54fc913b36e32705152`,
+    both passed local verification and embarked with seed `KA35NBWCYTV4`.
+- Test harness corrections were isolated from production code: arguments after
+  Godot's `--` delimiter were not parsed as game options; a newly generated
+  framework-dependent runtime config could not use the copied runtime; and a
+  flat smoke-runtime directory lacked the parent `release_info.json`. Reusing
+  the accepted isolated Mod profile and the fake game directory layout fixed
+  those harness-only failures. The final smoke was rerun against the packaged
+  DLL from the fake game layout and passed.
+- Preserved the final two-file candidate at
+  `artifacts/staging/v0.3.2-20260728-1753`:
+  - `CoopGuard.dll`, 123,904 bytes, SHA-256
+    `c337bde2ce8d9c915e8e63866c6dfd71aac6e05827723f08776d74bc0d158087`;
+  - `CoopGuard.json`, 374 bytes, SHA-256
+    `e989fc33736ce6a4948967ff888b5ab3ed2d65434a436c9ff490e47151cf73d6`.
+  The assembly version is `0.3.2.0`, the manifest version is `v0.3.2`, and the
+  package contains exactly those two files.
+- No file was installed into the live game, and v0.3.2 was not uploaded to
+  Workshop or GitHub. A real Steam two-account/two-machine session remains the
+  final external validation step.

@@ -101,9 +101,25 @@ internal static class FingerprintPrecomputePatch
     }
 }
 
-[HarmonyPatch(typeof(ModManager), nameof(ModManager.GetGameplayRelevantModNameList))]
 internal static class GameplayModListPatch
 {
+    public static void Apply(Harmony harmony)
+    {
+        MethodInfo original = AccessTools.DeclaredMethod(
+                typeof(ModManager),
+                nameof(ModManager.GetGameplayRelevantModNameList))
+            ?? throw new MissingMethodException(
+                typeof(ModManager).FullName,
+                nameof(ModManager.GetGameplayRelevantModNameList));
+        MethodInfo postfix = AccessTools.DeclaredMethod(
+                typeof(GameplayModListPatch),
+                nameof(Postfix))
+            ?? throw new MissingMethodException(
+                typeof(GameplayModListPatch).FullName,
+                nameof(Postfix));
+        harmony.Patch(original, postfix: new HarmonyMethod(postfix));
+    }
+
     [HarmonyPriority(Priority.Last)]
     private static void Postfix(ref List<string>? __result)
     {

@@ -17,12 +17,21 @@ namespace CoopGuard;
 internal static class FatalIncidentReporter
 {
     private const int RecentLogLimit = 80;
+    private static readonly TimeSpan IncidentLogWindow = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan PendingExceptionWindow = TimeSpan.FromSeconds(5);
     private static readonly object Sync = new();
-    private static readonly Queue<string> RecentLogs = new(RecentLogLimit);
+    private static readonly Queue<CapturedLog> RecentLogs = new(RecentLogLimit);
     private static readonly ConditionalWeakTable<NErrorPopup, PopupReport>
         PopupReports = new();
-    private static Exception? _pendingInternalError;
+    private static PendingInternalError? _pendingInternalError;
 
+    private sealed record CapturedLog(
+        DateTimeOffset CapturedAt,
+        LogLevel Level,
+        string Message);
+    private sealed record PendingInternalError(
+        Exception Exception,
+        DateTimeOffset CapturedAt);
     private sealed record PopupReport(string Text, bool Chinese);
 
     public static void Initialize()
@@ -42,7 +51,7 @@ internal static class FatalIncidentReporter
                 extra?.missingModsOnHost ?? [],
                 extra?.missingModsOnLocal ?? [],
                 info.GetErrorString(),
-                SnapshotLogs(),
+                SnapshotLogs(IncidentLogWindow, LogLevel.Error),
                 IsChinese());
             if (incident == null)
             {
@@ -66,20 +75,24 @@ internal static class FatalIncidentReporter
     {
         lock (Sync)
         {
-            _pendingInternalError = exception;
+            _pendingInternalError = new(
+                exception,
+                DateTimeOffset.UtcNow);
         }
     }
 
     public static bool TryCreateInternalPopup(out NErrorPopup? popup)
     {
-        Exception? exception;
+        PendingInternalError? pending;
         lock (Sync)
         {
-            exception = _pendingInternalError;
+            pending = _pendingInternalError;
             _pendingInternalError = null;
         }
 
-        if (exception == null)
+        if (pending == null
+            || DateTimeOffset.UtcNow - pending.CapturedAt
+                > PendingExceptionWindow)
         {
             popup = null;
             return false;
@@ -87,11 +100,13 @@ internal static class FatalIncidentReporter
 
         try
         {
+            Exception exception = pending.Exception;
             Exception root = exception.GetBaseException();
             IncidentText incident = IncidentExplainer.ExplainException(
                 root.GetType().Name,
-                FindSuspectMod(root),
-                DependencyName(root),
+                FindSuspectMod(exception),
+                DependencyName(exception),
+                root.Message,
                 IsChinese());
             popup = CreateDiagnosticPopup(incident);
             return true;
@@ -135,21 +150,9 @@ internal static class FatalIncidentReporter
 
     public static void ShowVerified()
     {
-        try
-        {
-            NFullscreenTextVfx? notice = NFullscreenTextVfx.Create(
-                IsChinese()
-                    ? "CoopGuard：联机校验通过"
-                    : "CoopGuard: multiplayer verification passed");
-            if (notice != null)
-            {
-                NGame.Instance?.AddChild(notice);
-            }
-        }
-        catch (Exception ex)
-        {
-            Main.Log.Error($"Could not show CoopGuard health status: {ex}");
-        }
+        ShowNotice(
+            "CoopGuard：本机 Mod 完整校验通过",
+            "CoopGuard: full local Mod verification passed");
     }
 
     public static void ShowManualSnapshot()
@@ -218,10 +221,16 @@ internal static class FatalIncidentReporter
         {
             DisplayServer.ClipboardSet(report.Text);
             Main.Log.Info("Copied a redacted CoopGuard diagnostic report.");
+            ShowNotice(
+                "CoopGuard：诊断已复制",
+                "CoopGuard: diagnosis copied");
         }
         catch (Exception ex)
         {
             Main.Log.Error($"Could not copy the diagnostic report: {ex}");
+            ShowNotice(
+                "CoopGuard：复制失败，请重试",
+                "CoopGuard: copy failed; please retry");
         }
 
         return true;
@@ -234,7 +243,7 @@ internal static class FatalIncidentReporter
         bool chinese = IsChinese();
         snapshot ??= ModFingerprint.ValidateQuick();
         string health = snapshot.Errors.Count == 0
-            ? $"verified; mods={snapshot.ModCount}; files={snapshot.FileCount}; bytes={snapshot.TotalBytes}"
+            ? $"quick freshness passed; mods={snapshot.ModCount}; files={snapshot.FileCount}; bytes={snapshot.TotalBytes}; full bytes not reread"
             : "blocked; " + string.Join("; ", snapshot.Errors.Take(6));
         NErrorPopup? popup = NErrorPopup.Create(
             incident.Title,
@@ -303,15 +312,47 @@ internal static class FatalIncidentReporter
                 RecentLogs.Dequeue();
             }
 
-            RecentLogs.Enqueue(bounded);
+            RecentLogs.Enqueue(
+                new CapturedLog(
+                    DateTimeOffset.UtcNow,
+                    level,
+                    bounded));
         }
     }
 
-    private static string[] SnapshotLogs()
+    private static string[] SnapshotLogs(
+        TimeSpan? maximumAge = null,
+        LogLevel minimumLevel = LogLevel.Warn)
     {
         lock (Sync)
         {
-            return RecentLogs.ToArray();
+            DateTimeOffset cutoff = maximumAge.HasValue
+                ? DateTimeOffset.UtcNow - maximumAge.Value
+                : DateTimeOffset.MinValue;
+            return RecentLogs
+                .Where(entry =>
+                    entry.CapturedAt >= cutoff
+                    && entry.Level >= minimumLevel)
+                .Select(entry =>
+                    $"[{entry.CapturedAt.UtcDateTime:O}] [{entry.Level}] {entry.Message}")
+                .ToArray();
+        }
+    }
+
+    private static void ShowNotice(string chinese, string english)
+    {
+        try
+        {
+            NFullscreenTextVfx? notice = NFullscreenTextVfx.Create(
+                IsChinese() ? chinese : english);
+            if (notice != null)
+            {
+                NGame.Instance?.AddChild(notice);
+            }
+        }
+        catch (Exception ex)
+        {
+            Main.Log.Error($"Could not show CoopGuard status: {ex}");
         }
     }
 
@@ -335,24 +376,27 @@ internal static class FatalIncidentReporter
     {
         try
         {
-            IEnumerable<Assembly> stackAssemblies = new StackTrace(
-                    exception,
-                    fNeedFileInfo: false)
-                .GetFrames()?
-                .Select(frame => frame.GetMethod()?.DeclaringType?.Assembly)
-                .Where(assembly => assembly != null)
-                .Cast<Assembly>()
-                .Distinct()
-                ?? [];
-
-            foreach (Assembly assembly in stackAssemblies)
+            foreach (Exception candidate in ExceptionChain(exception))
             {
-                Mod? owner = ModManager.Mods.FirstOrDefault(mod =>
-                    mod.state == ModLoadState.Loaded
-                    && mod.assemblies.Contains(assembly));
-                if (owner != null)
+                IEnumerable<Assembly> stackAssemblies = new StackTrace(
+                        candidate,
+                        fNeedFileInfo: false)
+                    .GetFrames()?
+                    .Select(frame => frame.GetMethod()?.DeclaringType?.Assembly)
+                    .Where(assembly => assembly != null)
+                    .Cast<Assembly>()
+                    .Distinct()
+                    ?? [];
+
+                foreach (Assembly assembly in stackAssemblies)
                 {
-                    return owner.manifest?.id;
+                    Mod? owner = ModManager.Mods.FirstOrDefault(mod =>
+                        mod.state == ModLoadState.Loaded
+                        && mod.assemblies.Contains(assembly));
+                    if (owner != null)
+                    {
+                        return owner.manifest?.id;
+                    }
                 }
             }
         }
@@ -366,13 +410,15 @@ internal static class FatalIncidentReporter
 
     private static string? DependencyName(Exception exception)
     {
-        string? value = exception switch
-        {
-            FileNotFoundException fileNotFound => fileNotFound.FileName,
-            FileLoadException fileLoad => fileLoad.FileName,
-            BadImageFormatException badImage => badImage.FileName,
-            _ => null
-        };
+        string? value = ExceptionChain(exception)
+            .Select(candidate => candidate switch
+            {
+                FileNotFoundException fileNotFound => fileNotFound.FileName,
+                FileLoadException fileLoad => fileLoad.FileName,
+                BadImageFormatException badImage => badImage.FileName,
+                _ => null
+            })
+            .FirstOrDefault(candidate => !string.IsNullOrWhiteSpace(candidate));
         if (string.IsNullOrWhiteSpace(value))
         {
             return null;
@@ -381,6 +427,46 @@ internal static class FatalIncidentReporter
         string fileName = Path.GetFileName(value);
         int comma = fileName.IndexOf(',');
         return comma > 0 ? fileName[..comma] : fileName;
+    }
+
+    private static IEnumerable<Exception> ExceptionChain(Exception exception)
+    {
+        Stack<Exception> pending = new();
+        HashSet<Exception> visited = [];
+        pending.Push(exception);
+        while (pending.TryPop(out Exception? current))
+        {
+            if (!visited.Add(current))
+            {
+                continue;
+            }
+
+            yield return current;
+            if (current.InnerException != null)
+            {
+                pending.Push(current.InnerException);
+            }
+
+            if (current is AggregateException aggregate)
+            {
+                foreach (Exception inner in aggregate.InnerExceptions)
+                {
+                    pending.Push(inner);
+                }
+            }
+
+            if (current is ReflectionTypeLoadException reflection
+                && reflection.LoaderExceptions != null)
+            {
+                foreach (Exception? loader in reflection.LoaderExceptions)
+                {
+                    if (loader != null)
+                    {
+                        pending.Push(loader);
+                    }
+                }
+            }
+        }
     }
 }
 
