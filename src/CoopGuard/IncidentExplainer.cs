@@ -20,8 +20,8 @@ internal static class IncidentExplainer
         IReadOnlyList<string> recentLogs,
         bool chinese)
     {
-        bool fingerprintMissingOnHost = missingOnHost.Any(IsFingerprintEntry);
-        bool fingerprintMissingOnLocal = missingOnLocal.Any(IsFingerprintEntry);
+        bool fingerprintMissingOnHost = missingOnHost.Any(IsAggregateEntry);
+        bool fingerprintMissingOnLocal = missingOnLocal.Any(IsAggregateEntry);
         bool failureMissingOnHost = missingOnHost.Any(IsFailureEntry);
         bool failureMissingOnLocal = missingOnLocal.Any(IsFailureEntry);
         bool incompatibleProtocol = missingOnHost
@@ -29,6 +29,8 @@ internal static class IncidentExplainer
                 .Any(IsOtherProtocolEntry);
         string[] hostMods = SafeModNames(missingOnHost);
         string[] localMods = SafeModNames(missingOnLocal);
+        string[] componentsMissingOnHost = ComponentNames(missingOnHost);
+        string[] componentsMissingOnLocal = ComponentNames(missingOnLocal);
 
         return reason switch
         {
@@ -41,6 +43,8 @@ internal static class IncidentExplainer
                 incompatibleProtocol,
                 hostMods,
                 localMods,
+                componentsMissingOnHost,
+                componentsMissingOnLocal,
                 chinese),
             "Timeout" => Timeout(nativeDetail, chinese),
             "HandshakeTimeout" => HandshakeTimeout(chinese),
@@ -383,7 +387,7 @@ internal static class IncidentExplainer
         string value = input.Replace('\r', ' ').Replace('\0', ' ');
         value = Regex.Replace(
             value,
-            @"CoopGuard-package-v\d+-[A-Za-z0-9-]+",
+            @"CoopGuard-(?:package|component)-v\d+-[A-Za-z0-9_-]+",
             "<package-fingerprint>",
             RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
         value = Regex.Replace(
@@ -452,6 +456,8 @@ internal static class IncidentExplainer
         bool incompatibleProtocol,
         IReadOnlyList<string> missingOnHost,
         IReadOnlyList<string> missingOnLocal,
+        IReadOnlyList<string> componentsMissingOnHost,
+        IReadOnlyList<string> componentsMissingOnLocal,
         bool chinese)
     {
         if (fingerprintMissingOnHost != fingerprintMissingOnLocal
@@ -513,9 +519,49 @@ internal static class IncidentExplainer
 
         bool packageBytesDiffer =
             fingerprintMissingOnHost && fingerprintMissingOnLocal;
+        string[] differingComponents = componentsMissingOnHost
+            .Intersect(componentsMissingOnLocal, StringComparer.Ordinal)
+            .Take(5)
+            .ToArray();
+        string[] localOnlyComponents = componentsMissingOnHost
+            .Except(componentsMissingOnLocal, StringComparer.Ordinal)
+            .Take(5)
+            .ToArray();
+        string[] hostOnlyComponents = componentsMissingOnLocal
+            .Except(componentsMissingOnHost, StringComparer.Ordinal)
+            .Take(5)
+            .ToArray();
+        bool locatedComponents = differingComponents.Length > 0
+            || localOnlyComponents.Length > 0
+            || hostOnlyComponents.Length > 0;
         string evidenceZh;
         string evidenceEn;
-        if (missingOnHost.Count > 0 || missingOnLocal.Count > 0)
+        if (locatedComponents)
+        {
+            List<string> zh = [];
+            List<string> en = [];
+            if (differingComponents.Length > 0)
+            {
+                zh.Add("内容或版本不同：" + string.Join(", ", differingComponents));
+                en.Add("Different content or version: " + string.Join(", ", differingComponents));
+            }
+
+            if (localOnlyComponents.Length > 0)
+            {
+                zh.Add("仅本机存在：" + string.Join(", ", localOnlyComponents));
+                en.Add("Present only locally: " + string.Join(", ", localOnlyComponents));
+            }
+
+            if (hostOnlyComponents.Length > 0)
+            {
+                zh.Add("仅主机存在：" + string.Join(", ", hostOnlyComponents));
+                en.Add("Present only on host: " + string.Join(", ", hostOnlyComponents));
+            }
+
+            evidenceZh = string.Join('\n', zh);
+            evidenceEn = string.Join('\n', en);
+        }
+        else if (missingOnHost.Count > 0 || missingOnLocal.Count > 0)
         {
             string host = missingOnHost.Count == 0
                 ? "无"
@@ -533,8 +579,8 @@ internal static class IncidentExplainer
         }
         else if (packageBytesDiffer)
         {
-            evidenceZh = "Mod 名称和声明版本可能相同，但 CoopGuard 的有效包内容指纹不同。";
-            evidenceEn = "Mod names and declared versions may match, but CoopGuard found different effective package fingerprints.";
+            evidenceZh = "单个 Mod 包指纹一致，但整体指纹不同；差异可能来自 Mod 加载顺序或其他全局组成。";
+            evidenceEn = "Individual Mod package fingerprints match, but the aggregate differs; Mod load order or another global component may differ.";
         }
         else
         {
@@ -542,11 +588,15 @@ internal static class IncidentExplainer
             evidenceEn = "STS2 reported NetError.ModMismatch without a safely displayable difference list.";
         }
 
-        string causeZh = packageBytesDiffer
-            ? "双方实际加载的 Mod 程序集、PCK 或其他包文件内容不同。常见原因是创意工坊更新不完整、旧文件残留或本地修改。"
+        string causeZh = locatedComponents
+            ? "CoopGuard 已通过双方的逐 Mod 包指纹定位到上述差异；这不是根据日志猜测的责任 Mod。"
+            : packageBytesDiffer
+            ? "双方整体 Mod 组成不同，但现有逐 Mod 指纹没有定位到单个包，不能可靠点名某个 Mod。"
             : "双方启用的 Mod 集合或声明版本不同。";
-        string causeEn = packageBytesDiffer
-            ? "The peers loaded different Mod assembly, PCK, or package bytes. Common causes are an incomplete Workshop update, leftover old files, or local modifications."
+        string causeEn = locatedComponents
+            ? "CoopGuard located the listed differences from per-Mod package fingerprints exchanged by both peers; this is not a guess from log proximity."
+            : packageBytesDiffer
+            ? "The aggregate Mod composition differs, but the per-Mod fingerprints do not identify one package, so no single Mod can be named reliably."
             : "The peers have different enabled Mod sets or declared versions.";
 
         return Build(
@@ -844,9 +894,15 @@ internal static class IncidentExplainer
         needles.Any(needle =>
             value.Contains(needle, StringComparison.OrdinalIgnoreCase));
 
-    private static bool IsFingerprintEntry(string value) =>
+    private static bool IsAggregateEntry(string value) =>
         value.StartsWith(
             FingerprintCodec.CompatibilityFamilyPrefix,
+            StringComparison.Ordinal);
+
+    private static bool IsGuardEntry(string value) =>
+        IsAggregateEntry(value)
+        || value.StartsWith(
+            FingerprintCodec.ComponentFamilyPrefix,
             StringComparison.Ordinal);
 
     private static bool IsFailureEntry(string value) =>
@@ -855,14 +911,26 @@ internal static class IncidentExplainer
             StringComparison.Ordinal);
 
     private static bool IsOtherProtocolEntry(string value) =>
-        IsFingerprintEntry(value)
+        IsAggregateEntry(value)
         && !value.StartsWith(
             FingerprintCodec.CompatibilityPrefix,
             StringComparison.Ordinal);
 
+    private static string[] ComponentNames(IEnumerable<string> values) =>
+        values
+            .Select(value =>
+                FingerprintCodec.TryParseComponentEntry(
+                    value,
+                    out string modId)
+                    ? SafeLabel(modId)
+                    : string.Empty)
+            .Where(value => value.Length > 0)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
     private static string[] SafeModNames(IEnumerable<string> values) =>
         values
-            .Where(value => !IsFingerprintEntry(value))
+            .Where(value => !IsGuardEntry(value))
             .Select(SafeLabel)
             .Where(value => value.Length > 0)
             .Distinct(StringComparer.Ordinal)
@@ -876,7 +944,11 @@ internal static class IncidentExplainer
             return string.Empty;
         }
 
-        string safe = Redact(value).Replace('\n', ' ');
+        string safe = new(
+            Redact(value)
+                .Select(character =>
+                    char.IsControl(character) ? ' ' : character)
+                .ToArray());
         return safe.Length <= 100 ? safe : safe[..97] + "...";
     }
 

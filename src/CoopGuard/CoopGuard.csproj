@@ -7,7 +7,7 @@
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <PathMap>$(MSBuildProjectDirectory)=/_/src/CoopGuard</PathMap>
-    <Version>0.3.2</Version>
+    <Version>0.3.3</Version>
     <AssemblyName>CoopGuard</AssemblyName>
     <RootNamespace>CoopGuard</RootNamespace>
     <NoWarn>$(NoWarn);MSB3270</NoWarn>

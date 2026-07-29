@@ -74,17 +74,66 @@ Check(
 
 IncidentText byteMismatch = IncidentExplainer.ExplainNetwork(
     "ModMismatch",
-    [FingerprintCodec.CompatibilityPrefix + "aaaaaaaa"],
-    [FingerprintCodec.CompatibilityPrefix + "bbbbbbbb"],
+    [
+        FingerprintCodec.CompatibilityPrefix + new string('a', 64),
+        FingerprintCodec.ComponentEntry(
+            "Merchant2CuteII",
+            new string('c', 64))
+    ],
+    [
+        FingerprintCodec.CompatibilityPrefix + new string('b', 64),
+        FingerprintCodec.ComponentEntry(
+            "Merchant2CuteII",
+            new string('d', 64))
+    ],
     "ModMismatch",
     [],
     chinese: true)
     ?? throw new InvalidOperationException("Package mismatch was not explained.");
 Check(
     byteMismatch.Code == "CG-MOD-MISMATCH"
-        && byteMismatch.Body.Contains("有效包内容指纹不同", StringComparison.Ordinal)
-        && !byteMismatch.Body.Contains("aaaaaaaa", StringComparison.Ordinal),
-    "Package-byte mismatch details were missing or leaked a fingerprint.");
+        && byteMismatch.Body.Contains("Merchant2CuteII", StringComparison.Ordinal)
+        && byteMismatch.Body.Contains("内容或版本不同", StringComparison.Ordinal)
+        && !byteMismatch.Body.Contains(new string('c', 64), StringComparison.Ordinal),
+    "The differing Mod was not identified or its fingerprint leaked.");
+
+IncidentText oneSidedMod = IncidentExplainer.ExplainNetwork(
+    "ModMismatch",
+    [
+        FingerprintCodec.CompatibilityPrefix + new string('a', 64),
+        FingerprintCodec.ComponentEntry(
+            "LocalOnlyCosmetic",
+            new string('c', 64))
+    ],
+    [FingerprintCodec.CompatibilityPrefix + new string('b', 64)],
+    "ModMismatch",
+    [],
+    chinese: false)
+    ?? throw new InvalidOperationException("A one-sided Mod was not explained.");
+Check(
+    oneSidedMod.Body.Contains(
+        "Present only locally: LocalOnlyCosmetic",
+        StringComparison.Ordinal),
+    "A one-sided non-gameplay Mod was not named.");
+
+IncidentText unsafeComponentName = IncidentExplainer.ExplainNetwork(
+    "ModMismatch",
+    [
+        FingerprintCodec.CompatibilityPrefix + new string('a', 64),
+        FingerprintCodec.ComponentEntry(
+            "Bad\nMod\u0001",
+            new string('c', 64))
+    ],
+    [FingerprintCodec.CompatibilityPrefix + new string('b', 64)],
+    "ModMismatch",
+    [],
+    chinese: false)
+    ?? throw new InvalidOperationException("An unsafe Mod ID was not explained.");
+Check(
+    !unsafeComponentName.Body.Contains("Bad\nMod", StringComparison.Ordinal)
+        && !unsafeComponentName.Body.Any(character =>
+            char.IsControl(character) && character != '\n'),
+    "A peer-controlled Mod ID injected control characters into the popup.");
 
 IncidentText missingGuard = IncidentExplainer.ExplainNetwork(
     "ModMismatch",
@@ -102,7 +151,7 @@ Check(
 IncidentText incompatibleGuard = IncidentExplainer.ExplainNetwork(
     "ModMismatch",
     [FingerprintCodec.CompatibilityPrefix + "aaaaaaaa"],
-    [FingerprintCodec.CompatibilityFamilyPrefix + "4-bbbbbbbb"],
+    [FingerprintCodec.CompatibilityFamilyPrefix + "5-bbbbbbbb"],
     "ModMismatch",
     [],
     chinese: false)
@@ -261,6 +310,10 @@ string redacted = IncidentExplainer.Redact(
         + "C:\\Users\\name\\save.dat \\\\server\\share\\save.dat "
         + FingerprintCodec.CompatibilityPrefix
         + "aaaaaaaa "
+        + FingerprintCodec.ComponentEntry(
+            "PrivateFixture",
+            new string('c', 64))
+        + " "
         + new string('b', 64));
 Check(
     !redacted.Contains("76561198824432109", StringComparison.Ordinal)
@@ -271,6 +324,9 @@ Check(
         && !redacted.Contains("\\\\server", StringComparison.Ordinal)
         && !redacted.Contains(
             FingerprintCodec.CompatibilityPrefix,
+            StringComparison.Ordinal)
+        && !redacted.Contains(
+            FingerprintCodec.ComponentPrefix,
             StringComparison.Ordinal)
         && !redacted.Contains(new string('b', 64), StringComparison.Ordinal),
     "A diagnostic summary leaked identity, network, credential, or path data.");
@@ -307,6 +363,19 @@ Check(
     escaped == "a%7Cb|line%0D%0Abreak|100%25",
     "Canonical field escaping changed.");
 
+string componentEntry = FingerprintCodec.ComponentEntry(
+    "中文-Mod_Id",
+    new string('a', 64));
+Check(
+    FingerprintCodec.TryParseComponentEntry(
+        componentEntry,
+        out string parsedComponentId)
+        && parsedComponentId == "中文-Mod_Id"
+        && !FingerprintCodec.TryParseComponentEntry(
+            componentEntry[..^1] + "x",
+            out _),
+    "Per-Mod compatibility entry encoding became ambiguous.");
+
 System.Globalization.CultureInfo originalCulture =
     System.Globalization.CultureInfo.CurrentCulture;
 try
@@ -335,6 +404,10 @@ try
     PackageCapture first = PackageHasher.Capture(firstRoot, 0, "Fixture");
     PackageCapture same = PackageHasher.Capture(secondRoot, 0, "Fixture");
     Check(first.Digest == same.Digest, "File creation order changed the package digest.");
+    Check(
+        first.Digest
+            == PackageHasher.Capture(firstRoot, 99, "Fixture").Digest,
+        "Mod load order leaked into the per-Mod package digest.");
     Check(first.FileCount == 6, "Nested or empty package files were not captured.");
     Check(
         first.CanonicalText.Contains("data/rules.json", StringComparison.Ordinal),

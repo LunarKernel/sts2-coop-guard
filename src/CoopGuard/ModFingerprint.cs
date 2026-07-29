@@ -233,14 +233,39 @@ internal static class ModFingerprint
         }
     }
 
-    public static string GetCompatibilityEntry()
+    public static IReadOnlyList<string> GetCompatibilityEntries()
     {
         lock (CaptureLock)
         {
             _compatibilityEntryIssued = true;
-            return !_restartRequired && _baseline != null && _lastFailure == null
-                ? FingerprintCodec.CompatibilityPrefix + _baseline.Digest
-                : UnsafeCompatibilityEntry;
+            if (_restartRequired || _baseline == null || _lastFailure != null)
+            {
+                return [UnsafeCompatibilityEntry];
+            }
+
+            List<string> entries =
+            [
+                FingerprintCodec.CompatibilityPrefix + _baseline.Digest
+            ];
+            entries.AddRange(_baseline.Packages.Select(package =>
+                FingerprintCodec.ComponentEntry(
+                    package.ModId,
+                    package.Digest)));
+            if (_baseline.MountedPcks.Count > 0)
+            {
+                string mountedDigest = FingerprintCodec.Hash(string.Join(
+                    '\n',
+                    _baseline.MountedPcks.Select((mounted, index) =>
+                        FingerprintCodec.Line(
+                            index,
+                            mounted.Length,
+                            mounted.Digest))));
+                entries.Add(FingerprintCodec.ComponentEntry(
+                    "Sts2SkinManager mounted PCKs",
+                    mountedDigest));
+            }
+
+            return entries;
         }
     }
 

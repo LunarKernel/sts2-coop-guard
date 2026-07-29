@@ -40,7 +40,7 @@ internal static class PackageHasher
 
     public static PackageCapture Capture(
         string root,
-        int order,
+        int _,
         string modId,
         string modVersion = "",
         int maxFiles = MaxFilesPerPackage,
@@ -139,7 +139,6 @@ internal static class PackageHasher
             string digest = Convert.ToHexString(hash).ToLowerInvariant();
             string line = FingerprintCodec.Line(
                 "file",
-                order,
                 modId,
                 relativePath,
                 streamLength,

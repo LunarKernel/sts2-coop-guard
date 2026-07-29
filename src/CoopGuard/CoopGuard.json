@@ -3,7 +3,7 @@
   "name": "STS2 Co-op Guard",
   "author": "LunarKernel",
   "description": "Rejects different loaded Mod packages, shows multiplayer health, and provides copyable fatal diagnostics in Chinese or English.",
-  "version": "v0.3.2",
+  "version": "v0.3.3",
   "min_game_version": "0.109.1",
   "has_pck": false,
   "has_dll": true,

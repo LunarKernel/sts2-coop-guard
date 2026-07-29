@@ -670,3 +670,51 @@ All timestamps use Asia/Taipei (UTC+08:00).
 - Steam temporarily hid the public item while its automated content-analysis
   check runs. This is a platform review state, not a private visibility
   setting.
+
+### 11:03 - Version 0.3.3 identifies the differing Mod
+
+- Fixed the root cause of generic Mod-mismatch reports: protocol 3 exchanged
+  only one aggregate package fingerprint, so STS2 could prove that the peers
+  differed but could not identify one package.
+- Bumped the compatibility protocol to 4. A healthy peer now appends one
+  native gameplay-Mod-list entry per loaded Mod, containing a base64url Mod ID
+  and that package's SHA-256 digest, while retaining the aggregate fingerprint
+  for load-order and whole-composition checks.
+- Made each package digest independent of Mod load order; the aggregate digest
+  still includes order. Mounted SkinManager PCKs are represented as one named
+  component because they are not owned by individual native Mod manifests.
+- The native mismatch popup now distinguishes:
+  - the same Mod with different content or version;
+  - a Mod present only locally;
+  - a Mod present only on the host;
+  - an aggregate-only difference such as load order, where no individual Mod
+    can be named reliably.
+- Kept the trust boundary narrow: peer-supplied Mod IDs are length-bounded,
+  strict UTF-8 decoded, redacted and stripped of control characters before
+  display. Raw component entries and hashes are removed from user-facing
+  reports. No file contents, paths, Steam IDs or telemetry are exchanged.
+- Validation against STS2 `0.109.1` completed:
+  - Release build with warnings as errors: zero warnings and errors;
+  - fingerprint/incident self-check passed, including different-content,
+    one-sided, Unicode, malformed and control-character component cases;
+  - bundled .NET `9.0.7` Harmony smoke patched and removed all 21 expected
+    targets, preserved fail-closed behavior and verified the current game
+    build tuple;
+  - isolated ENet host/client instances with the same `MismatchFixture` ID but
+    different package bytes produced `NetError.ModMismatch`; the rendered
+    client popup passed `DIAGNOSIS_MISMATCH_OK mod=MismatchFixture` and did not
+    expose the wire fingerprint;
+  - a second isolated ENet run with identical package bytes gave both peers
+    digest `a46233cd3ef3365ed242c95a2a8e453a26ba85633ace5be5b116c410ad4302fc`,
+    both auto-readied, embarked, and the host wrote the native multiplayer
+    save without `ModMismatch` or `StateDivergence`.
+- Preserved the final two-file candidate at
+  `artifacts/staging/v0.3.3-20260729-1103`:
+  - `CoopGuard.dll`, 127,488 bytes, SHA-256
+    `3d7efed0aba5d363b9b5cf21b72c0e0170b8cf31300c3b22a3ba6b366d74f90d`;
+  - `CoopGuard.json`, 374 bytes, SHA-256
+    `8593f5e5fdd000df9ffedda491fdeb24b509b7f166cb8c9e9b0a21989a2ed9da`.
+  The assembly version is `0.3.3.0`, the manifest version is `v0.3.3`, and the
+  package contains exactly those two files.
+- No file was installed into the live game, and v0.3.3 was not uploaded to
+  Workshop or GitHub.

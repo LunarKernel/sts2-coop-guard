@@ -5,10 +5,10 @@ peers have different Mod package bytes, even when the Mod IDs and versions
 match. Fresh/loaded lobbies also revalidate every peer immediately before that
 peer starts the run.
 
-Private Workshop test item:
+Public Workshop item:
 https://steamcommunity.com/sharedfiles/filedetails/?id=3772631781
 
-## How version 3 works
+## How protocol 4 works
 
 - After STS2 finishes loading Mods, CoopGuard recursively hashes regular files
   below every loaded Mod root—including Mods marked
@@ -23,9 +23,12 @@ https://steamcommunity.com/sharedfiles/filedetails/?id=3772631781
   successfully mounted. This covers disabled skin packages and generated
   overlays that are active despite not having `ModLoadState.Loaded`. Unknown
   game, integration or runtime versions fail closed.
-- CoopGuard appends one fixed package-digest entry to STS2's existing gameplay
-  Mod list. STS2's native join check therefore covers fresh lobbies, loaded-run
-  lobbies and running-game rejoins before the client enters the session.
+- CoopGuard appends one aggregate digest plus one digest for each loaded Mod to
+  STS2's existing gameplay Mod list. STS2's native set difference can therefore
+  name Mods whose package bytes or versions differ, including Mods marked
+  `affects_gameplay: false`. A separate grouped entry identifies mounted-PCK
+  differences managed by Sts2SkinManager. The aggregate remains the fail-closed
+  backstop for load-order and other global differences.
 - The native-list sentinel is installed before every other Harmony patch. If a
   later gameplay or diagnostic patch fails after a game update, the sentinel
   remains active and emits a process-unique unsafe entry instead of silently
@@ -42,8 +45,9 @@ https://steamcommunity.com/sharedfiles/filedetails/?id=3772631781
   explicitly tested build even when Skin Manager is not installed. Unknown
   builds fail closed until CoopGuard is updated.
 
-There is no custom network message. Peers receive only the aggregate digest
-already carried by STS2's native Mod-list handshake—not file contents,
+There is no custom network message. Peers receive the aggregate digest and
+per-Mod digest entries through STS2's native Mod-list handshake. Each per-Mod
+entry contains the manifest ID and a package digest—not file contents,
 absolute paths, settings, saves or account data.
 
 ## Fatal error explanations
@@ -113,7 +117,7 @@ dotnet build src/CoopGuard/CoopGuard.csproj `
   -c Release -warnaserror `
   -p:Sts2Path="C:\SteamLibrary\steamapps\common\Slay the Spire 2" `
   -p:CreateModPackage=true `
-  -p:PackageDir="C:\path\to\new\v0.3.2-stage"
+  -p:PackageDir="C:\path\to\new\v0.3.3-stage"
 ```
 
 The staging directory must contain exactly:
@@ -141,6 +145,8 @@ normal-quit exclusion and diagnostic redaction. It runs on the installed .NET
 .NET 9 runtime. The copyable-report check also verifies the manual health
 snapshot and rejects Steam IDs, IPv4/IPv6 endpoints, credentials, package
 fingerprints, SHA-256 values, UNC paths and other absolute paths.
+Per-Mod checks cover Unicode IDs, malformed entries, peer-controlled control
+characters, same-ID byte differences and Mods present on only one peer.
 
 ## Current boundaries
 
@@ -176,7 +182,7 @@ fingerprints, SHA-256 values, UNC paths and other absolute paths.
   change makes the next connection or rejoin fail closed, but cannot undo state
   already executed in the current run.
 - Identical package bytes can still contain the same deterministic bug.
-- Version `v0.3.2` is built against STS2 `0.109.1`. It has passed the Release
+- Version `v0.3.3` is built against STS2 `0.109.1`. It has passed the Release
   build, pure self-check, 21-target Harmony smoke test, isolated native-modal
   button/clipboard checks for a manual snapshot and an internal
   `MissingMethodException`, and a matching two-client ENet run in which both

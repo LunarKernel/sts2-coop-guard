@@ -124,7 +124,7 @@ internal static class GameplayModListPatch
     private static void Postfix(ref List<string>? __result)
     {
         __result ??= [];
-        __result.Add(ModFingerprint.GetCompatibilityEntry());
+        __result.AddRange(ModFingerprint.GetCompatibilityEntries());
     }
 }
 
