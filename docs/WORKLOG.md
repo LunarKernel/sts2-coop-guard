@@ -718,3 +718,23 @@ All timestamps use Asia/Taipei (UTC+08:00).
   package contains exactly those two files.
 - No file was installed into the live game, and v0.3.3 was not uploaded to
   Workshop or GitHub.
+
+### 11:16 - Version 0.3.3 published
+
+- Committed the v0.3.3 implementation as `d1012cb`
+  (`Identify mismatched Mods`) and pushed the existing
+  `agent/coopguard-v0.2.1` branch to GitHub. Draft PR #1 remains the review
+  target.
+- Created the recoverable pre-upload backup
+  `C:\SteamLibrary\steamapps\sts2-coop-guard-workshop.backup.pre-v0.3.3-20260729-111350`.
+- Updated existing Workshop item `3772631781` in place through Mega Crit's
+  official ModUploader and the signed-in Steam client; no duplicate item was
+  created.
+- Uploaded exactly the validated two-file v0.3.3 candidate: 127,488-byte
+  `CoopGuard.dll` and 374-byte `CoopGuard.json` (127,862 bytes total).
+- Steam displayed the updated 127.862 KB size, 29 Jul @ 11:16am timestamp,
+  v0.3.3 description and sixth change note. The owner visibility menu showed
+  `Public` selected.
+- Steam temporarily hid the public item while its automated content-analysis
+  check runs. This is a platform review state, not a private visibility
+  setting.
