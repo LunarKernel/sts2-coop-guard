@@ -1,18 +1,18 @@
-# STS2 Co-op Guard
+# BetterCoop
 
-`CoopGuard` makes Slay the Spire 2 reject a multiplayer join when the joining
-peers have different Mod package bytes, even when the Mod IDs and versions
-match. Fresh/loaded lobbies also revalidate every peer immediately before that
-peer starts the run. Its optional multiplayer Toolkit adds health displays,
-fixed coordination messages, local diagnosis and consent-gated forensics
-without changing combat, RNG, run or save state.
+`BetterCoop` is a safety-first Slay the Spire 2 multiplayer toolkit. Its
+compatibility guard rejects joins when peers have different effective Mod
+package bytes, even when Mod IDs and versions match. Its optional tools add a
+co-op cockpit, health and progress displays, fixed coordination messages,
+actionable local diagnosis, environment management and consent-gated
+forensics without changing combat, RNG, run or save state.
 
 Public Workshop item:
 https://steamcommunity.com/sharedfiles/filedetails/?id=3772631781
 
-## How protocol 4 works
+## How protocol 5 works
 
-- After STS2 finishes loading Mods, CoopGuard recursively hashes regular files
+- After STS2 finishes loading Mods, BetterCoop recursively hashes regular files
   below every loaded Mod root—including Mods marked
   `affects_gameplay: false`. Relative path, byte length and SHA-256 are included
   in load order; junctions, symbolic links and ambiguous Unicode-normalized
@@ -20,12 +20,12 @@ https://steamcommunity.com/sharedfiles/filedetails/?id=3772631781
   included, so packages containing several DLL variants cannot compare equal
   when different variants were loaded.
 - With the exact audited `Sts2SkinManager 0.27.1` integration on STS2 build
-  `v0.109.1` (`c8c577f6`) and its bundled .NET `9.0.7`, CoopGuard also hashes
+  `v0.109.1` (`c8c577f6`) and its bundled .NET `9.0.7`, BetterCoop also hashes
   the bytes and observed mount order of every PCK that Skin Manager
   successfully mounted. This covers disabled skin packages and generated
   overlays that are active despite not having `ModLoadState.Loaded`. Unknown
   game, integration or runtime versions fail closed.
-- CoopGuard appends one aggregate digest plus one digest for each loaded Mod to
+- BetterCoop appends one aggregate digest plus one digest for each loaded Mod to
   STS2's existing gameplay Mod list. STS2's native set difference can therefore
   name Mods whose package bytes or versions differ, including Mods marked
   `affects_gameplay: false`. A separate grouped entry identifies mounted-PCK
@@ -45,9 +45,9 @@ https://steamcommunity.com/sharedfiles/filedetails/?id=3772631781
   mismatch token.
 - The installed STS2 version, commit and main-assembly hash must match an
   explicitly tested build even when Skin Manager is not installed. Unknown
-  builds fail closed until CoopGuard is updated.
+  builds fail closed until BetterCoop is updated.
 
-Guard Protocol 4 uses no custom network message. Peers receive the aggregate
+Guard Protocol 5 uses no custom network message. Peers receive the aggregate
 digest and per-Mod digest entries through STS2's native Mod-list handshake.
 Each per-Mod entry contains the manifest ID and a package digest—not file
 contents, absolute paths, settings, saves or account data.
@@ -60,7 +60,7 @@ results or replace STS2 networking.
 
 ## Fatal error explanations
 
-CoopGuard replaces STS2's short popup for recognized multiplayer failures with
+BetterCoop replaces STS2's short popup for recognized multiplayer failures with
 an actionable diagnosis. It uses the game's structured failure reason first.
 Only `Error` entries captured during the preceding 30 seconds can refine an
 ambiguous network root cause; older warnings/errors remain report context but
@@ -83,7 +83,7 @@ path, Steam ID, IP address, credential, save or fingerprint is uploaded or
 sent to peers. Native crashes that terminate Godot before it can create UI
 cannot display an in-game popup.
 
-Every CoopGuard diagnosis popup has a native `Copy diagnosis` / `复制诊断`
+Every BetterCoop diagnosis popup has a native `Copy diagnosis` / `复制诊断`
 button. It copies a bounded, redacted local report containing the error code,
 game version, connection/run state, package-health counts and the latest eight
 warning/error messages. It never copies a package digest, SHA-256, raw path,
@@ -123,9 +123,9 @@ features are tracked in
 When a multiplayer player clicks ready and the full local package check passes,
 STS2 also shows its native non-blocking confirmation. Snapshot, history and
 fatal-error reports remain local until the player explicitly copies or saves
-them; CoopGuard has no telemetry.
+them; BetterCoop has no telemetry.
 
-CoopGuard does not modify combat, RNG, run or save state, and it never attempts
+BetterCoop does not modify combat, RNG, run or save state, and it never attempts
 to repair divergence. It is a compatibility guard for trusted co-op peers, not
 anti-cheat or remote attestation.
 
@@ -135,7 +135,7 @@ The repository pins its .NET SDK. A normal build does not create or overwrite a
 release package:
 
 ```powershell
-dotnet build src/CoopGuard/CoopGuard.csproj `
+dotnet build src/BetterCoop/BetterCoop.csproj `
   -c Release -warnaserror `
   -p:Sts2Path="C:\SteamLibrary\steamapps\common\Slay the Spire 2"
 ```
@@ -144,17 +144,17 @@ To create a release candidate, pass a new staging directory that does not
 already exist:
 
 ```powershell
-dotnet build src/CoopGuard/CoopGuard.csproj `
+dotnet build src/BetterCoop/BetterCoop.csproj `
   -c Release -warnaserror `
   -p:Sts2Path="C:\SteamLibrary\steamapps\common\Slay the Spire 2" `
   -p:CreateModPackage=true `
-  -p:PackageDir="C:\path\to\new\v0.4.0-stage"
+  -p:PackageDir="C:\path\to\new\v0.5.0-stage"
 ```
 
 The staging directory must contain exactly:
 
-- `CoopGuard.dll`
-- `CoopGuard.json`
+- `BetterCoop.dll`
+- `BetterCoop.json`
 
 Building does not install or modify the live game.
 
@@ -181,7 +181,7 @@ characters, same-ID byte differences and Mods present on only one peer.
 Toolkit checks cover bounded codecs, consent/session rollover, contribution
 monotonicity, lockfiles, sidecars, report comparison, dependency graphs,
 preferences and deterministic parser fuzzing. Set
-`COOPGUARD_FUZZ_ITERATIONS=1000000` for the release-gate fuzz run.
+`BETTERCOOP_FUZZ_ITERATIONS=1000000` for the release-gate fuzz run.
 
 ## Current boundaries
 
@@ -200,7 +200,7 @@ preferences and deterministic parser fuzzing. Set
   exposed; a later PCK mount makes the next gate require a restart.
 - Game-build verification is global rather than conditional on Skin Manager.
   Any version, commit or main-assembly hash that has not passed the complete
-  local matrix blocks modded multiplayer until CoopGuard is updated.
+  local matrix blocks modded multiplayer until BetterCoop is updated.
 - One capture is capped at 4,096 files, 16,384 scanned entries, 1 GiB and 8 MiB
   of canonical text across loaded Mods and externally mounted PCKs. Limit
   failures reject multiplayer.
@@ -209,7 +209,7 @@ preferences and deterministic parser fuzzing. Set
 - Loaded-run and rejoin checks compare the peers' frozen full digests. Network
   callbacks detect ordinary later edits by file list, size and timestamp; an
   adversarial same-length edit that also restores the timestamp can evade that
-  quick scan until the next full gate. CoopGuard is not anti-cheat.
+  quick scan until the next full gate. BetterCoop is not anti-cheat.
 - Loaded-run checks cannot prove that current packages match the packages that
   originally created an old save.
 - Once a run is already in progress, arbitrary on-disk edits cannot be detected
@@ -223,12 +223,12 @@ preferences and deterministic parser fuzzing. Set
   STS2 exposes no audited stable public entity/owner identity for them. The
   remaining checkpoint categories report their availability explicitly.
 - G9 wire expansion remains disabled until the native receiver's allocation
-  bounds are audited. Local category comparison is active and Guard Protocol 4
+  bounds are audited. Local category comparison is active and Guard Protocol 5
   remains the fail-closed compatibility path.
 - Screen-reader narration is not guaranteed by the current Godot UI. Controls
   remain keyboard focusable, labeled, scalable to 200%, high-contrast capable
   and backed by copyable text.
-- Version `v0.4.0` targets STS2 `v0.109.1` (`c8c577f6`) and bundled .NET
+- Version `v0.5.0` targets STS2 `v0.109.1` (`c8c577f6`) and bundled .NET
   `9.0.7`. Release build/self-check, 62-binding Harmony isolation smoke,
   isolated Toolkit UI contract, real 2/3/4-client ENet matrix, 3-client
   collaboration/API test and one-shot diagnostic fault recovery pass locally.

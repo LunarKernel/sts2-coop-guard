@@ -5,7 +5,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Platform;
 
-namespace CoopGuard;
+namespace BetterCoop;
 
 internal readonly record struct ToolkitPeerObservation(
     ulong NetId,

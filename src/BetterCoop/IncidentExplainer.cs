@@ -3,7 +3,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace CoopGuard;
+namespace BetterCoop;
 
 internal sealed record IncidentText(
     string Code,
@@ -220,12 +220,12 @@ internal static class IncidentExplainer
                 "patch installation failed"))
         {
             code = "CG-GUARD-INITIALIZATION-FAILED";
-            titleZh = "CoopGuard 核心补丁安装失败";
-            titleEn = "CoopGuard core patch installation failed";
-            causeZh = "CoopGuard 无法安全安装当前游戏版本所需的联机保护补丁，因此已经禁用本次联机校验结果。";
-            causeEn = "CoopGuard could not safely install the multiplayer protection patches required by this game build, so this session's verification result was disabled.";
-            actionZh = "退出游戏，更新 CoopGuard；若尚无兼容版本，请等待更新后再进行 Mod 联机。";
-            actionEn = "Exit the game and update CoopGuard. If no compatible build exists yet, wait for an update before playing modded multiplayer.";
+            titleZh = "BetterCoop 核心补丁安装失败";
+            titleEn = "BetterCoop core patch installation failed";
+            causeZh = "BetterCoop 无法安全安装当前游戏版本所需的联机保护补丁，因此已经禁用本次联机校验结果。";
+            causeEn = "BetterCoop could not safely install the multiplayer protection patches required by this game build, so this session's verification result was disabled.";
+            actionZh = "退出游戏，更新 BetterCoop；若尚无兼容版本，请等待更新后再进行 Mod 联机。";
+            actionEn = "Exit the game and update BetterCoop. If no compatible build exists yet, wait for an update before playing modded multiplayer.";
         }
         else if (ContainsAny(
                      detail,
@@ -233,12 +233,12 @@ internal static class IncidentExplainer
                      "release metadata could not be verified"))
         {
             code = "CG-UNSUPPORTED-GAME-BUILD";
-            titleZh = "当前游戏版本尚未通过 CoopGuard 验证";
-            titleEn = "This game build is not yet verified by CoopGuard";
-            causeZh = "当前 STS2 版本、commit 或主程序集哈希不在 CoopGuard 已测试的构建列表中。";
-            causeEn = "The current STS2 version, commit, or main assembly hash is not in CoopGuard's tested build list.";
-            actionZh = "不要继续 Mod 联机；更新 CoopGuard，或等待作者完成当前游戏版本的兼容性测试。";
-            actionEn = "Do not continue modded multiplayer. Update CoopGuard or wait until this game build has been compatibility-tested.";
+            titleZh = "当前游戏版本尚未通过 BetterCoop 验证";
+            titleEn = "This game build is not yet verified by BetterCoop";
+            causeZh = "当前 STS2 版本、commit 或主程序集哈希不在 BetterCoop 已测试的构建列表中。";
+            causeEn = "The current STS2 version, commit, or main assembly hash is not in BetterCoop's tested build list.";
+            actionZh = "不要继续 Mod 联机；更新 BetterCoop，或等待作者完成当前游戏版本的兼容性测试。";
+            actionEn = "Do not continue modded multiplayer. Update BetterCoop or wait until this game build has been compatibility-tested.";
         }
         else if (ContainsAny(
                 detail,
@@ -250,8 +250,8 @@ internal static class IncidentExplainer
             code = "CG-LOCAL-FILES-CHANGED";
             titleZh = "Mod 文件在启动后发生变化";
             titleEn = "Mod files changed after startup";
-            causeZh = "CoopGuard 检测到已经校验过的 Mod、程序集或 PCK 在本次游戏运行期间发生变化，旧指纹已经失效。";
-            causeEn = "CoopGuard detected that a verified Mod, assembly, or PCK changed during this game session, invalidating the previous fingerprint.";
+            causeZh = "BetterCoop 检测到已经校验过的 Mod、程序集或 PCK 在本次游戏运行期间发生变化，旧指纹已经失效。";
+            causeEn = "BetterCoop detected that a verified Mod, assembly, or PCK changed during this game session, invalidating the previous fingerprint.";
             actionZh = "退出游戏，确认创意工坊更新和本地文件操作已经完成，然后重新启动。";
             actionEn = "Exit the game, let Workshop updates and local file operations finish, then restart.";
         }
@@ -260,8 +260,8 @@ internal static class IncidentExplainer
             code = "CG-LOCAL-UNSAFE-PATH";
             titleZh = "Mod 包含无法安全校验的路径";
             titleEn = "Mod contains a path that cannot be verified safely";
-            causeZh = "Mod 包含符号链接、联接点或指向包目录之外的程序集；CoopGuard 无法保证双方实际读取相同文件。";
-            causeEn = "A Mod contains a symbolic link, junction, or assembly outside its package directory, so CoopGuard cannot prove both peers read the same files.";
+            causeZh = "Mod 包含符号链接、联接点或指向包目录之外的程序集；BetterCoop 无法保证双方实际读取相同文件。";
+            causeEn = "A Mod contains a symbolic link, junction, or assembly outside its package directory, so BetterCoop cannot prove both peers read the same files.";
             actionZh = "删除该 Mod 的残留目录并从可信来源重新安装，避免使用链接目录。";
             actionEn = "Remove the leftover Mod directory and reinstall it from a trusted source without linked directories.";
         }
@@ -270,8 +270,8 @@ internal static class IncidentExplainer
             code = "CG-LOCAL-SAFETY-LIMIT";
             titleZh = "Mod 包超过安全校验上限";
             titleEn = "Mod package exceeded a verification safety limit";
-            causeZh = "已加载 Mod 的文件数量、总大小或校验描述超过 CoopGuard 的安全上限，因此校验被拒绝。";
-            causeEn = "The loaded Mods exceeded CoopGuard's safe file-count, byte, or fingerprint-description limit, so verification was rejected.";
+            causeZh = "已加载 Mod 的文件数量、总大小或校验描述超过 BetterCoop 的安全上限，因此校验被拒绝。";
+            causeEn = "The loaded Mods exceeded BetterCoop's safe file-count, byte, or fingerprint-description limit, so verification was rejected.";
             actionZh = "检查异常大的 Mod 包、缓存或生成文件；清理后重启游戏。";
             actionEn = "Check for unusually large Mod packages, caches, or generated files, clean them, then restart the game.";
         }
@@ -300,8 +300,8 @@ internal static class IncidentExplainer
             code = "CG-LOCAL-VERIFY-FAILED";
             titleZh = "本机 Mod 校验失败";
             titleEn = "Local Mod verification failed";
-            causeZh = "CoopGuard 无法生成可信的本机 Mod 指纹，因此按安全策略阻止联机继续。";
-            causeEn = "CoopGuard could not produce a trustworthy local Mod fingerprint, so multiplayer was blocked safely.";
+            causeZh = "BetterCoop 无法生成可信的本机 Mod 指纹，因此按安全策略阻止联机继续。";
+            causeEn = "BetterCoop could not produce a trustworthy local Mod fingerprint, so multiplayer was blocked safely.";
             actionZh = "按证据修复对应 Mod，确认文件稳定后重启游戏。";
             actionEn = "Fix the Mod identified by the evidence, make sure its files are stable, then restart the game.";
         }
@@ -332,8 +332,8 @@ internal static class IncidentExplainer
             chinese,
             "快速文件新鲜度检查通过",
             "Quick file freshness check passed",
-            "CoopGuard 已确认 Mod 路径、文件列表、大小和修改时间仍与完整启动指纹一致；本次快照没有重新读取全部文件内容。",
-            "CoopGuard confirmed that Mod paths, file lists, sizes, and modification times still match the full startup fingerprint. This snapshot did not reread every file byte.",
+            "BetterCoop 已确认 Mod 路径、文件列表、大小和修改时间仍与完整启动指纹一致；本次快照没有重新读取全部文件内容。",
+            "BetterCoop confirmed that Mod paths, file lists, sizes, and modification times still match the full startup fingerprint. This snapshot did not reread every file byte.",
             $"Mods: {modCount}; files: {fileCount}; bytes: {totalBytes.ToString(CultureInfo.InvariantCulture)}",
             $"Mods: {modCount}; files: {fileCount}; bytes: {totalBytes.ToString(CultureInfo.InvariantCulture)}",
             "可继续联机。若疑似卡死，可按 Ctrl+F8 生成一份当前诊断快照。",
@@ -372,8 +372,8 @@ internal static class IncidentExplainer
             ];
         List<string> lines =
         [
-            "CoopGuard diagnostic report",
-            $"CoopGuard version: {coopGuardVersion}",
+            "BetterCoop diagnostic report",
+            $"BetterCoop version: {coopGuardVersion}",
             $"Report format: {ToolkitReportComparison.SupportedFormat}",
             $"Captured UTC: {capturedAt.UtcDateTime:O}",
             $"Game version: {Redact(gameVersion)}"
@@ -440,7 +440,7 @@ internal static class IncidentExplainer
         string value = input.Replace('\r', ' ').Replace('\0', ' ');
         value = Regex.Replace(
             value,
-            @"CoopGuard-(?:package|component)-v\d+-[A-Za-z0-9_-]+",
+            @"BetterCoop-(?:package|component)-v\d+-[A-Za-z0-9_-]+",
             "<package-fingerprint>",
             RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
         value = Regex.Replace(
@@ -517,24 +517,24 @@ internal static class IncidentExplainer
             || incompatibleProtocol)
         {
             return Build(
-                "CG-COOPGUARD-MISSING",
+                "CG-BETTERCOOP-MISSING",
                 chinese,
-                "有玩家未安装同版 CoopGuard",
-                "A peer is missing the same CoopGuard version",
-                "只有一侧提供了 CoopGuard 兼容性条目，说明某位玩家没有安装 CoopGuard，或使用了不兼容的协议版本。",
-                "Only one side supplied a CoopGuard compatibility entry. A peer is missing CoopGuard or uses an incompatible protocol version.",
+                "有玩家未安装同版 BetterCoop",
+                "A peer is missing the same BetterCoop version",
+                "只有一侧提供了 BetterCoop 兼容性条目，说明某位玩家没有安装 BetterCoop，或使用了不兼容的协议版本。",
+                "Only one side supplied a BetterCoop compatibility entry. A peer is missing BetterCoop or uses an incompatible protocol version.",
                 incompatibleProtocol
-                    ? "双方提供了不同协议版本的 CoopGuard 条目。"
+                    ? "双方提供了不同协议版本的 BetterCoop 条目。"
                     : fingerprintMissingOnHost
-                        ? "主机缺少本机提供的 CoopGuard 条目。"
-                        : "本机缺少主机提供的 CoopGuard 条目。",
+                        ? "主机缺少本机提供的 BetterCoop 条目。"
+                        : "本机缺少主机提供的 BetterCoop 条目。",
                 incompatibleProtocol
-                    ? "The peers supplied different CoopGuard protocol versions."
+                    ? "The peers supplied different BetterCoop protocol versions."
                     : fingerprintMissingOnHost
-                        ? "The host is missing the CoopGuard entry supplied locally."
-                        : "The local client is missing the CoopGuard entry supplied by the host.",
-                "所有玩家安装同一个 CoopGuard 版本，完全退出并重启游戏后重新创建房间。",
-                "Install the same CoopGuard version on every peer, fully exit and restart the game, then create a new lobby.",
+                        ? "The host is missing the BetterCoop entry supplied locally."
+                        : "The local client is missing the BetterCoop entry supplied by the host.",
+                "所有玩家安装同一个 BetterCoop 版本，完全退出并重启游戏后重新创建房间。",
+                "Install the same BetterCoop version on every peer, fully exit and restart the game, then create a new lobby.",
                 "已确认",
                 "Confirmed",
                 false);
@@ -557,14 +557,14 @@ internal static class IncidentExplainer
             return Build(
                 "CG-PEER-VERIFY-FAILED",
                 chinese,
-                "至少一名玩家的 CoopGuard 本地校验失败",
-                "A peer failed CoopGuard local verification",
+                "至少一名玩家的 BetterCoop 本地校验失败",
+                "A peer failed BetterCoop local verification",
                 "这不是已经确认的 Mod 包字节差异；至少一侧无法生成可信指纹，例如游戏版本未验证、补丁安装失败、Mod 加载失败或文件正在变化。",
                 "This is not a confirmed package-byte difference. At least one side could not create a trustworthy fingerprint because of an unverified game build, patch failure, Mod load failure, or changing files.",
                 sideZh,
                 sideEn,
-                "校验失败的一方查看自己的 CoopGuard 本地弹窗并按其提示修复；所有玩家重启后再创建房间。",
-                "The failing peer should follow its local CoopGuard popup. Restart every peer before creating another lobby.",
+                "校验失败的一方查看自己的 BetterCoop 本地弹窗并按其提示修复；所有玩家重启后再创建房间。",
+                "The failing peer should follow its local BetterCoop popup. Restart every peer before creating another lobby.",
                 "已确认",
                 "Confirmed",
                 false);
@@ -671,8 +671,8 @@ internal static class IncidentExplainer
             evidenceEn = $"Missing on host: {(missingOnHost.Count == 0 ? "none" : host)}\nMissing locally: {(missingOnLocal.Count == 0 ? "none" : local)}";
             if (packageBytesDiffer)
             {
-                evidenceZh += "\nCoopGuard 同时检测到有效包内容指纹不同。";
-                evidenceEn += "\nCoopGuard also detected different effective package fingerprints.";
+                evidenceZh += "\nBetterCoop 同时检测到有效包内容指纹不同。";
+                evidenceEn += "\nBetterCoop also detected different effective package fingerprints.";
             }
         }
         else if (packageBytesDiffer)
@@ -687,12 +687,12 @@ internal static class IncidentExplainer
         }
 
         string causeZh = locatedComponents
-            ? "CoopGuard 已通过双方的逐 Mod 包指纹定位到上述差异；这不是根据日志猜测的责任 Mod。"
+            ? "BetterCoop 已通过双方的逐 Mod 包指纹定位到上述差异；这不是根据日志猜测的责任 Mod。"
             : packageBytesDiffer
             ? "双方整体 Mod 组成不同，但现有逐 Mod 指纹没有定位到单个包，不能可靠点名某个 Mod。"
             : "双方启用的 Mod 集合或声明版本不同。";
         string causeEn = locatedComponents
-            ? "CoopGuard located the listed differences from per-Mod package fingerprints exchanged by both peers; this is not a guess from log proximity."
+            ? "BetterCoop located the listed differences from per-Mod package fingerprints exchanged by both peers; this is not a guess from log proximity."
             : packageBytesDiffer
             ? "The aggregate Mod composition differs, but the per-Mod fingerprints do not identify one package, so no single Mod can be named reliably."
             : "The peers have different enabled Mod sets or declared versions.";
@@ -929,8 +929,8 @@ internal static class IncidentExplainer
         bool showReportBugButton)
     {
         string title = chinese
-            ? $"CoopGuard 联机诊断：{titleZh}"
-            : $"CoopGuard Multiplayer Diagnosis: {titleEn}";
+            ? $"BetterCoop 联机诊断：{titleZh}"
+            : $"BetterCoop Multiplayer Diagnosis: {titleEn}";
         string body = chinese
             ? $"错误编号：{code}\n可信度：{confidenceZh}\n\n根因：\n{causeZh}\n\n证据：\n{evidenceZh}\n\n建议：\n{actionZh}"
             : $"Error code: {code}\nConfidence: {confidenceEn}\n\nRoot cause:\n{causeEn}\n\nEvidence:\n{evidenceEn}\n\nWhat to do:\n{actionEn}";

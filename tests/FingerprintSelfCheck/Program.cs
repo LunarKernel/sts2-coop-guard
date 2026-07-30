@@ -1,4 +1,4 @@
-using CoopGuard;
+using BetterCoop;
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Text;
@@ -48,11 +48,11 @@ static void WriteFixture(string root, bool reverse)
 }
 
 Check(
-    FingerprintCodec.ProtocolVersion == 4
+    FingerprintCodec.ProtocolVersion == 5
     && FingerprintCodec.CompatibilityPrefix.Contains(
-        "-v4-",
+        "-v5-",
         StringComparison.Ordinal),
-    "Unsafe G9 wire expansion changed the audited protocol-4 fallback.");
+    "Unsafe G9 wire expansion changed the audited protocol-5 fallback.");
 
 IncidentText chineseDivergence = IncidentExplainer.ExplainNetwork(
     "StateDivergence",
@@ -158,24 +158,24 @@ IncidentText missingGuard = IncidentExplainer.ExplainNetwork(
     "ModMismatch",
     [],
     chinese: true)
-    ?? throw new InvalidOperationException("A missing CoopGuard peer was not explained.");
+    ?? throw new InvalidOperationException("A missing BetterCoop peer was not explained.");
 Check(
-    missingGuard.Code == "CG-COOPGUARD-MISSING"
+    missingGuard.Code == "CG-BETTERCOOP-MISSING"
         && missingGuard.Body.Contains("所有玩家安装同一个", StringComparison.Ordinal),
-    "A missing CoopGuard peer was confused with a package-byte mismatch.");
+    "A missing BetterCoop peer was confused with a package-byte mismatch.");
 
 IncidentText incompatibleGuard = IncidentExplainer.ExplainNetwork(
     "ModMismatch",
     [FingerprintCodec.CompatibilityPrefix + "aaaaaaaa"],
-    [FingerprintCodec.CompatibilityFamilyPrefix + "5-bbbbbbbb"],
+    [FingerprintCodec.CompatibilityFamilyPrefix + "6-bbbbbbbb"],
     "ModMismatch",
     [],
     chinese: false)
-    ?? throw new InvalidOperationException("An incompatible CoopGuard protocol was not explained.");
+    ?? throw new InvalidOperationException("An incompatible BetterCoop protocol was not explained.");
 Check(
-    incompatibleGuard.Code == "CG-COOPGUARD-MISSING"
-        && incompatibleGuard.Body.Contains("different CoopGuard protocol", StringComparison.Ordinal),
-    "An incompatible CoopGuard protocol was confused with package bytes.");
+    incompatibleGuard.Code == "CG-BETTERCOOP-MISSING"
+        && incompatibleGuard.Body.Contains("different BetterCoop protocol", StringComparison.Ordinal),
+    "An incompatible BetterCoop protocol was confused with package bytes.");
 
 IncidentText localVerificationFailure = IncidentExplainer.ExplainNetwork(
     "ModMismatch",
@@ -300,12 +300,12 @@ Check(
 
 Check(
     IncidentExplainer.ExplainLocalVerification(
-        "Package fingerprint failed: The current STS2 build is not supported by this CoopGuard version.",
+        "Package fingerprint failed: The current STS2 build is not supported by this BetterCoop version.",
         chinese: false).Code == "CG-UNSUPPORTED-GAME-BUILD",
     "An unsupported game build did not receive its specific diagnosis.");
 Check(
     IncidentExplainer.ExplainLocalVerification(
-        "CoopGuard could not install its required multiplayer patches (MissingMethodException).",
+        "BetterCoop could not install its required multiplayer patches (MissingMethodException).",
         chinese: false).Code == "CG-GUARD-INITIALIZATION-FAILED",
     "A guard initialization failure did not receive its specific diagnosis.");
 
@@ -792,7 +792,7 @@ finally
 }
 
 DirectoryInfo persistenceTemporary =
-    Directory.CreateTempSubdirectory("coopguard-persistence-selfcheck-");
+    Directory.CreateTempSubdirectory("bettercoop-persistence-selfcheck-");
 try
 {
     string reportsRoot = Path.Combine(
@@ -1130,7 +1130,7 @@ Check(
         "Fixture").Error.Length > 0,
     "Provider-count, malformed-JSON or file-size bounds were not enforced.");
 
-DirectoryInfo temporary = Directory.CreateTempSubdirectory("coopguard-selfcheck-");
+DirectoryInfo temporary = Directory.CreateTempSubdirectory("bettercoop-selfcheck-");
 try
 {
     string firstRoot = Path.Combine(temporary.FullName, "first");
@@ -1569,7 +1569,7 @@ Check(
 
 int fuzzIterations = int.TryParse(
         Environment.GetEnvironmentVariable(
-            "COOPGUARD_FUZZ_ITERATIONS"),
+            "BETTERCOOP_FUZZ_ITERATIONS"),
         out int requestedFuzz)
     ? Math.Clamp(requestedFuzz, 1, 1_000_000)
     : 10_000;

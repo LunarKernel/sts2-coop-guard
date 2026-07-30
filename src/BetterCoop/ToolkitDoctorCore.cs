@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace CoopGuard;
+namespace BetterCoop;
 
 internal sealed record DoctorDependency(
     string Id,
@@ -473,7 +473,7 @@ internal static class ModBisectPlanner
             ? 1
             : (int)Math.Ceiling(Math.Log2(groups.Count)) + 1;
         StringBuilder text = new();
-        text.AppendLine("CoopGuard dependency-aware manual A/B plan");
+        text.AppendLine("BetterCoop dependency-aware manual A/B plan");
         text.AppendLine(
             "Read-only: this plan does not edit, move, enable, disable or launch anything.");
         text.AppendLine(
@@ -534,7 +534,7 @@ internal static class ModBisectPlanner
     private static ModBisectPlan Unavailable(string reason) =>
         new(
             false,
-            "CoopGuard dependency-aware manual A/B plan\n"
+            "BetterCoop dependency-aware manual A/B plan\n"
             + "Plan unavailable: "
             + reason
             + "\nNo Mod or setting was changed.",

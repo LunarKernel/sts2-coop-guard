@@ -5,7 +5,7 @@ using HarmonyLib;
 if (args.Length != 2)
 {
     throw new ArgumentException(
-        "Usage: HarmonySmoke <game-data-dir> <CoopGuard.dll>");
+        "Usage: HarmonySmoke <game-data-dir> <BetterCoop.dll>");
 }
 
 string gameDirectory = Path.GetFullPath(args[0]);
@@ -19,30 +19,30 @@ AssemblyLoadContext.Default.Resolving += (_, name) =>
 };
 
 Assembly guard = AssemblyLoadContext.Default.LoadFromAssemblyPath(guardPath);
-Type main = guard.GetType("CoopGuard.Main", throwOnError: true)!;
+Type main = guard.GetType("BetterCoop.Main", throwOnError: true)!;
 string[] owners =
 [
-    "CoopGuard.guard.sentinel",
-    "CoopGuard.guard",
-    "CoopGuard.diagnostics",
-    "CoopGuard.toolkit.runtime",
-    "CoopGuard.toolkit.persistence",
-    "CoopGuard.toolkit.lobby",
-    "CoopGuard.toolkit.join",
-    "CoopGuard.toolkit.protocol",
-    "CoopGuard.toolkit.observers",
-    "CoopGuard.toolkit.forensics",
-    "CoopGuard.toolkit.rng",
-    "CoopGuard.toolkit.contributions"
+    "BetterCoop.guard.sentinel",
+    "BetterCoop.guard",
+    "BetterCoop.diagnostics",
+    "BetterCoop.toolkit.runtime",
+    "BetterCoop.toolkit.persistence",
+    "BetterCoop.toolkit.lobby",
+    "BetterCoop.toolkit.join",
+    "BetterCoop.toolkit.protocol",
+    "BetterCoop.toolkit.observers",
+    "BetterCoop.toolkit.forensics",
+    "BetterCoop.toolkit.rng",
+    "BetterCoop.toolkit.contributions"
 ];
 
 Dictionary<string, string[]> expected = new(StringComparer.Ordinal)
 {
-    ["CoopGuard.guard.sentinel"] =
+    ["BetterCoop.guard.sentinel"] =
     [
         "MegaCrit.Sts2.Core.Modding.ModManager.GetGameplayRelevantModNameList"
     ],
-    ["CoopGuard.guard"] =
+    ["BetterCoop.guard"] =
     [
         "MegaCrit.Sts2.Core.Helpers.OneTimeInitialization.ExecuteEssential",
         "MegaCrit.Sts2.Core.Modding.ModManager.AssociateAssemblyWithMod",
@@ -59,7 +59,7 @@ Dictionary<string, string[]> expected = new(StringComparer.Ordinal)
         "MegaCrit.Sts2.Core.Nodes.Screens.CustomRun.NCustomRunLoadScreen.ShouldAllowRunToBegin",
         "MegaCrit.Sts2.Core.Nodes.Screens.DailyRun.NDailyRunLoadScreen.ShouldAllowRunToBegin"
     ],
-    ["CoopGuard.diagnostics"] =
+    ["BetterCoop.diagnostics"] =
     [
         "MegaCrit.Sts2.Core.Nodes.CommonUi.NErrorPopup.Create",
         "MegaCrit.Sts2.Core.Nodes.CommonUi.NErrorPopup.Create",
@@ -68,19 +68,19 @@ Dictionary<string, string[]> expected = new(StringComparer.Ordinal)
         "MegaCrit.Sts2.Core.Nodes.NGame._Input",
         "MegaCrit.Sts2.Core.Nodes.NGame.ReturnToMainMenuWithInternalError"
     ],
-    ["CoopGuard.toolkit.runtime"] =
+    ["BetterCoop.toolkit.runtime"] =
     [
         "MegaCrit.Sts2.Core.Nodes.CommonUi.NControllerManager._Process",
         "MegaCrit.Sts2.Core.Nodes.NGame._Input",
         "MegaCrit.Sts2.Core.Nodes.NGame._Ready",
         "MegaCrit.Sts2.Core.Nodes.Screens.MainMenu.NMainMenu._Ready"
     ],
-    ["CoopGuard.toolkit.persistence"] =
+    ["BetterCoop.toolkit.persistence"] =
     [
         "MegaCrit.Sts2.Core.Nodes.Screens.MainMenu.NMultiplayerSubmenu.StartLoad",
         "MegaCrit.Sts2.Core.Saves.Managers.RunSaveManager.SaveRun"
     ],
-    ["CoopGuard.toolkit.lobby"] =
+    ["BetterCoop.toolkit.lobby"] =
     [
         "MegaCrit.Sts2.Core.Combat.CombatManager.Reset",
         "MegaCrit.Sts2.Core.Combat.CombatManager.SetReadyToEndTurn",
@@ -94,7 +94,7 @@ Dictionary<string, string[]> expected = new(StringComparer.Ordinal)
         "MegaCrit.Sts2.Core.Multiplayer.Game.Lobby.StartRunLobby.CleanUp",
         "MegaCrit.Sts2.Core.Multiplayer.Game.Lobby.StartRunLobby.SetReady"
     ],
-    ["CoopGuard.toolkit.join"] =
+    ["BetterCoop.toolkit.join"] =
     [
         "MegaCrit.Sts2.Core.Multiplayer.Game.JoinFlow.AttemptJoin",
         "MegaCrit.Sts2.Core.Multiplayer.Game.JoinFlow.AttemptLoadJoin",
@@ -102,23 +102,23 @@ Dictionary<string, string[]> expected = new(StringComparer.Ordinal)
         "MegaCrit.Sts2.Core.Multiplayer.Game.JoinFlow.Begin",
         "MegaCrit.Sts2.Core.Multiplayer.Game.JoinFlow.HandleInitialGameInfoMessage"
     ],
-    ["CoopGuard.toolkit.protocol"] =
+    ["BetterCoop.toolkit.protocol"] =
     [
         "MegaCrit.Sts2.Core.Multiplayer.NetClientGameService.OnPacketReceived",
         "MegaCrit.Sts2.Core.Multiplayer.NetHostGameService.OnPacketReceived"
     ],
-    ["CoopGuard.toolkit.observers"] =
+    ["BetterCoop.toolkit.observers"] =
     [
         "MegaCrit.Sts2.Core.GameActions.ActionExecutor..ctor",
         "MegaCrit.Sts2.Core.GameActions.Multiplayer.PlayerChoiceSynchronizer.WaitForRemoteChoice",
         "MegaCrit.Sts2.Core.Multiplayer.Game.MapSelectionSynchronizer.OnLocationChanged",
         "MegaCrit.Sts2.Core.Multiplayer.Game.MapSelectionSynchronizer.PlayerVotedForMapCoord"
     ],
-    ["CoopGuard.toolkit.forensics"] =
+    ["BetterCoop.toolkit.forensics"] =
     [
         "MegaCrit.Sts2.Core.Multiplayer.Game.ChecksumTracker..ctor"
     ],
-    ["CoopGuard.toolkit.rng"] =
+    ["BetterCoop.toolkit.rng"] =
     [
         "MegaCrit.Sts2.Core.Random.Rng.NextBool",
         "MegaCrit.Sts2.Core.Random.Rng.NextDouble",
@@ -130,7 +130,7 @@ Dictionary<string, string[]> expected = new(StringComparer.Ordinal)
         "MegaCrit.Sts2.Core.Random.Rng.NextUnsignedLong",
         "MegaCrit.Sts2.Core.Random.Rng.NextUnsignedLong"
     ],
-    ["CoopGuard.toolkit.contributions"] =
+    ["BetterCoop.toolkit.contributions"] =
     [
         "MegaCrit.Sts2.Core.Commands.CreatureCmd.Heal",
         "MegaCrit.Sts2.Core.Combat.History.CombatHistory.BlockGained",
@@ -145,14 +145,14 @@ try
             BindingFlags.NonPublic | BindingFlags.Static)
         ?? throw new MissingMethodException(main.FullName, "Install");
     Type sentinel = guard.GetType(
-        "CoopGuard.GameplayModListPatch",
+        "BetterCoop.GameplayModListPatch",
         throwOnError: true)!;
     sentinel.GetMethod("Apply", BindingFlags.Public | BindingFlags.Static)!
-        .Invoke(null, [new Harmony("CoopGuard.guard.sentinel")]);
+        .Invoke(null, [new Harmony("BetterCoop.guard.sentinel")]);
 
     InstallOwner(
         install,
-        "CoopGuard.guard",
+        "BetterCoop.guard",
         [
             "FingerprintPrecomputePatch",
             "LateAssemblyPatch",
@@ -169,7 +169,7 @@ try
         ]);
     InstallOwner(
         install,
-        "CoopGuard.diagnostics",
+        "BetterCoop.diagnostics",
         [
             "NetworkErrorExplanationPatch",
             "InternalErrorCapturePatch",
@@ -180,7 +180,7 @@ try
         ]);
     InstallOwner(
         install,
-        "CoopGuard.toolkit.runtime",
+        "BetterCoop.toolkit.runtime",
         [
             "ToolkitAttachPatch",
             "ToolkitFramePatch",
@@ -189,14 +189,14 @@ try
         ]);
     InstallOwner(
         install,
-        "CoopGuard.toolkit.persistence",
+        "BetterCoop.toolkit.persistence",
         [
             "ToolkitMultiplayerSavePatch",
             "ToolkitMultiplayerLoadWarningPatch"
         ]);
     InstallOwner(
         install,
-        "CoopGuard.toolkit.lobby",
+        "BetterCoop.toolkit.lobby",
         [
             "ToolkitStartLobbyPatch",
             "ToolkitLoadLobbyPatch",
@@ -212,7 +212,7 @@ try
         ]);
     InstallOwner(
         install,
-        "CoopGuard.toolkit.join",
+        "BetterCoop.toolkit.join",
         [
             "ToolkitJoinBeginPatch",
             "ToolkitInitialInfoPatch",
@@ -222,11 +222,11 @@ try
         ]);
     InstallOwner(
         install,
-        "CoopGuard.toolkit.protocol",
+        "BetterCoop.toolkit.protocol",
         ["ToolkitTransportSenderPatch"]);
     InstallOwner(
         install,
-        "CoopGuard.toolkit.observers",
+        "BetterCoop.toolkit.observers",
         [
             "ToolkitRemoteChoicePatch",
             "ToolkitMapVotePatch",
@@ -235,11 +235,11 @@ try
         ]);
     InstallOwner(
         install,
-        "CoopGuard.toolkit.forensics",
+        "BetterCoop.toolkit.forensics",
         ["ToolkitCheckpointObserverPatch"]);
     InstallOwner(
         install,
-        "CoopGuard.toolkit.rng",
+        "BetterCoop.toolkit.rng",
         [
             "ToolkitRngBoolPatch",
             "ToolkitRngIntMaxPatch",
@@ -253,7 +253,7 @@ try
         ]);
     InstallOwner(
         install,
-        "CoopGuard.toolkit.contributions",
+        "BetterCoop.toolkit.contributions",
         [
             "ToolkitContributionDamagePatch",
             "ToolkitContributionBlockPatch",
@@ -279,7 +279,7 @@ try
         install.Invoke(
             null,
             [
-                "CoopGuard.smoke.optional",
+                "BetterCoop.smoke.optional",
                 new Type[]
                 {
                     typeof(WorkingOptionalPatch),
@@ -293,7 +293,7 @@ try
     {
     }
 
-    if (TargetsFor("CoopGuard.smoke.optional").Length != 0
+    if (TargetsFor("BetterCoop.smoke.optional").Length != 0
         || owners.Any(owner => TargetsFor(owner).Length != expected[owner].Length))
     {
         throw new InvalidOperationException(
@@ -301,7 +301,7 @@ try
                 + "smoke="
                 + string.Join(
                     ',',
-                    TargetsFor("CoopGuard.smoke.optional"))
+                    TargetsFor("BetterCoop.smoke.optional"))
                 + "\nchanged="
                 + string.Join(
                     ',',
@@ -315,7 +315,7 @@ try
 }
 finally
 {
-    foreach (string owner in owners.Append("CoopGuard.smoke.optional"))
+    foreach (string owner in owners.Append("BetterCoop.smoke.optional"))
     {
         new Harmony(owner).UnpatchAll(owner);
     }
@@ -338,13 +338,13 @@ void InstallOwner(
 {
     Type[] patchTypes = patchNames
         .Select(name => guard.GetType(
-            "CoopGuard." + name,
+            "BetterCoop." + name,
             throwOnError: true)!)
         .ToArray();
     install.Invoke(null, [owner, patchTypes]);
 }
 
-[HarmonyPatch(typeof(string), "CoopGuardMissingOptionalTarget")]
+[HarmonyPatch(typeof(string), "BetterCoopMissingOptionalTarget")]
 internal static class MissingOptionalPatch
 {
     private static void Prefix()

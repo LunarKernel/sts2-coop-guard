@@ -2,13 +2,13 @@
 
 - 文档状态：Proposed
 - 目标版本：v0.4.x–v1.x，分阶段交付
-- 基线版本：CoopGuard v0.3.3 / Protocol 4 / STS2 v0.109.1
+- 基线版本：BetterCoop v0.5.0 / Protocol 5 / STS2 v0.109.1
 - 范围：H1–H12、C1–C10、G1–G12、D1–D10、F1–F8，共 52 项
 - 本文只批准设计与验证门槛，不批准直接实现、安装或发布
 
 ## 1. 目标
 
-把 CoopGuard 从“包一致性开局闸门”扩展为一个联机驾驶舱：在不改变
+把 BetterCoop 从“包一致性开局闸门”扩展为一个联机驾驶舱：在不改变
 战斗、运行、玩家、RNG 或存档权威状态的前提下，提供实时状态显示、
 低风险协作、环境修复指导、事故诊断和确定性取证。
 
@@ -123,7 +123,7 @@ Google 或 Apple 的审核、认证或背书。
 | G8 | Harmony 冲突图 | 展示 owner、目标、patch 类型和优先级；不解除 patch |
 | G9 | 分类指纹 | 将差异定位到程序集/PCK/确定性设置/包结构等类别 |
 | G10 | 确定性设置声明 | 合作 Mod 只发布设置摘要；失败时对声明项 fail-closed |
-| G11 | 能力/协议协商 | 可选诊断通道协商；不影响 Guard Protocol 4 |
+| G11 | 能力/协议协商 | 可选诊断通道协商；不影响 Guard Protocol 5 |
 | G12 | 已知问题规则目录 | 随发布包审查和版本化；无远端动态规则执行 |
 
 ### 4.4 D：诊断与事故响应
@@ -228,7 +228,7 @@ sequence
 ### 5.3 生命周期与线程
 
 1. Guard 哨兵最先安装，保持现有顺序。
-2. Guard 核心使用独立 Harmony owner（如 `coopguard.guard`）和安装事务；禁止把
+2. Guard 核心使用独立 Harmony owner（如 `bettercoop.guard`）和安装事务；禁止把
    可选 `[HarmonyPatch]` 与核心放进同一次 `PatchAll`。
 3. 每个可选模块使用独立 owner/目标清单，在 Guard 初始化完成后逐模块安装。
    目标缺失或安装回滚只禁用该模块；卸载只能移除自己的 owner。
@@ -274,7 +274,7 @@ sequence
 不得因为保留 ticket 而延长 C9/诊断数据生命期。
 
 本体已有 3 秒普通断线遮罩、远端加载时 8 秒遮罩、网络异常图标、队友公开
-状态和 Ping UI。CoopGuard 只补充可解释数字、历史和跨功能汇总，不复制本体
+状态和 Ping UI。BetterCoop 只补充可解释数字、历史和跨功能汇总，不复制本体
 已有交互。
 
 ## 7. Guard 与可选诊断通道
@@ -283,7 +283,7 @@ sequence
 
 | 协议域 | 用途 | 失败结果 |
 |---|---|---|
-| Guard Protocol 4+ | 游戏构建和有效 Mod 包兼容性 | 本地错误或不匹配时 fail-closed |
+| Guard Protocol 5+ | 游戏构建和有效 Mod 包兼容性 | 本地错误或不匹配时 fail-closed |
 | Diagnostics Protocol 1 | UI、协作、心跳和摘要 | 仅禁用对应远端功能，原生联机继续 |
 
 Diagnostics Protocol 禁止承载准备、开局、战斗动作、存档、修复命令或任何
@@ -359,7 +359,7 @@ Hello 只包含协议 major/minor、固定 feature bitset、locale 类别和隐�
 本地允许时启用。
 
 当前单 DLL 且严格包哈希的产品形态意味着诚实玩家必须先使用完全相同的
-CoopGuard 发布包；不同 Release/Diagnostics 实现会在进入 lobby 前由 Guard
+BetterCoop 发布包；不同 Release/Diagnostics 实现会在进入 lobby 前由 Guard
 拒绝，不能承诺“混合版本进入房间后降级”。协商只覆盖同一发布包内的本地开关、
 平台/API 可用性、模块熔断和防御性畸形/未知消息测试。unknown major 的运行时
 分支属于安全防御，不是版本偏斜兼容承诺；若未来拆包支持混合版本，必须另立 ADR。
@@ -375,7 +375,7 @@ CoopGuard 发布包；不同 Release/Diagnostics 实现会在进入 lobby 前由
 
 ### 8.1 威胁模型
 
-CoopGuard 仍面向可信合作玩家，不是反作弊或远程证明系统；但必须把远端
+BetterCoop 仍面向可信合作玩家，不是反作弊或远程证明系统；但必须把远端
 payload 当成可能恶意的数据，以防内存放大、异常、UI 注入和日志污染。
 
 | 数据级别 | 示例 | 处理 |
@@ -632,14 +632,14 @@ availability_mask:u8 || tags:8*16 bytes`，不包含历史或原始字段。客�
   旧 epoch 数据在解析前丢弃。该状态永远不参与 ready/start；
 - F6 Optional API 使用 `PublishStateDigest(modId, schemaVersion,
   sourceRevision, sha256Digest)`。Mod 在自己的公开确定性状态改变时主动推送缓存值；
-- CoopGuard 在收到自然 `ChecksumGenerated` callback 的入口时立即冻结当时最新值。
+- BetterCoop 在收到自然 `ChecksumGenerated` callback 的入口时立即冻结当时最新值。
   callback 入口之后到达的 publish 只属于下一个自然 checkpoint；
-- CoopGuard 不等待 publisher、不改变事件订阅顺序、不请求补发，也不因 missing
+- BetterCoop 不等待 publisher、不改变事件订阅顺序、不请求补发，也不因 missing
   contribution 阻塞游戏；missing 只使对应 `ModContributions` 项 Unknown。
 
 ## 11. Mod 作者 API
 
-首版 API 保持 push-only，避免 CoopGuard 在游戏线程同步调用第三方委托。
+首版 API 保持 push-only，避免 BetterCoop 在游戏线程同步调用第三方委托。
 需要把设置摘要纳入 Guard 的 Mod，必须在自身包内附带一个受现有包指纹保护的
 固定声明文件，声明 provider ID 和 schema；声明文件不包含用户设置值。运行时
 Mod 再主动发布摘要：
@@ -709,7 +709,7 @@ Ctrl+F8 保持为健康入口；现有致命错误弹窗仍只处理阻塞问题
 安全不变量不是概率目标：支持矩阵中的已知 Guard 不安全条件必须全部拦截。
 可选能力使用以下 SLO：
 
-CoopGuard 不上传生产遥测，因此这里是 Release 验证 SLO，不冒充线上观测值。
+BetterCoop 不上传生产遥测，因此这里是 Release 验证 SLO，不冒充线上观测值。
 一个 eligible client-minute 指支持构建上功能已启用且数据源可用的一分钟；该分钟
 只有在无 callback 逃逸异常、UI 没有阻碍原生进度且新鲜度目标满足时才算 good。
 每个 Release 候选必须累计至少 2,000 个 eligible client-minutes，目标
@@ -749,7 +749,7 @@ CoopGuard 不上传生产遥测，因此这里是 Release 验证 SLO，不冒充
 |---|---|---|
 | P0 基础 | Lifecycle、Observation、UI shell、限界/红action测试 | Guard 全回归；可选模块强制崩溃仍可联机 |
 | P1 本地驾驶舱 | H1/H2/H4/H5/H7/H8/H10/H11/H12、C4/C5/C6(lobby-only)/C7/C8、D1–D5/D8 | 无自定义消息；2-client/8h soak 通过；running C6 明确 Unsupported |
-| P2 环境治理 | G1–G10/G12、D6/D9、F6 Guard Settings API | 不修改游戏/存档/其他 Mod；只允许用户导出、原生保存后 sidecar 和获同意的报告历史写入 CoopGuard 自有目录；原子性测试通过 |
+| P2 环境治理 | G1–G10/G12、D6/D9、F6 Guard Settings API | 不修改游戏/存档/其他 Mod；只允许用户导出、原生保存后 sidecar 和获同意的报告历史写入 BetterCoop 自有目录；原子性测试通过 |
 | P3 可选协作 | H3/H6/H9、C1–C3/C9/C10、G11、D7/D10、F5 | ADR 0003 所有安全门槛通过 |
 | P4 高级取证 | F1–F4、F6 Optional Diagnostics API | 不额外生成 checksum/RNG；错误定位无越权数据 |
 | P5 工程化 | F7/F8 和完整矩阵 | Release 包检查、2/3/4-client CI、Steam人工验收 |

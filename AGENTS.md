@@ -26,7 +26,7 @@ a run from starting when peers are using different effective Mod packages.
   `docs/WORKLOG.md`.
 - Add or update one runnable self-check for non-trivial pure logic.
 - Before committing, run:
-  - `dotnet build src/CoopGuard/CoopGuard.csproj -p:Sts2Path="<game path>"`
+  - `dotnet build src/BetterCoop/BetterCoop.csproj -p:Sts2Path="<game path>"`
   - `dotnet run --project tests/FingerprintSelfCheck/FingerprintSelfCheck.csproj`
 
 ## Versioning

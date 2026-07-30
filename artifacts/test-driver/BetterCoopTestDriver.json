@@ -1,15 +1,15 @@
 {
-  "id": "CoopGuardTestDriver",
-  "name": "Coop Guard Test Driver",
+  "id": "BetterCoopTestDriver",
+  "name": "BetterCoop Test Driver",
   "author": "LunarKernel",
-  "description": "Artifacts-only headless driver for isolated CoopGuard multiplayer tests.",
+  "description": "Artifacts-only headless driver for isolated BetterCoop multiplayer tests.",
   "version": "v0.0.1",
   "min_game_version": "0.109.1",
   "has_pck": false,
   "has_dll": true,
   "dependencies": [
     {
-      "id": "CoopGuard",
+      "id": "BetterCoop",
       "min_version": "0.3.0"
     }
   ],

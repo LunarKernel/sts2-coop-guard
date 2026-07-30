@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace CoopGuard;
+namespace BetterCoop;
 
 internal sealed class FingerprintLimitException(string message)
     : IOException(message);

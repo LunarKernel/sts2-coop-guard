@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace CoopGuard;
+namespace BetterCoop;
 
 public static class FingerprintCodec
 {
@@ -10,9 +10,9 @@ public static class FingerprintCodec
         encoderShouldEmitUTF8Identifier: false,
         throwOnInvalidBytes: true);
 
-    public const int ProtocolVersion = 4;
-    public const string CompatibilityFamilyPrefix = "CoopGuard-package-v";
-    public const string ComponentFamilyPrefix = "CoopGuard-component-v";
+    public const int ProtocolVersion = 5;
+    public const string CompatibilityFamilyPrefix = "BetterCoop-package-v";
+    public const string ComponentFamilyPrefix = "BetterCoop-component-v";
     public static readonly string CompatibilityPrefix =
         CompatibilityFamilyPrefix + ProtocolVersion.ToString(CultureInfo.InvariantCulture) + "-";
     public static readonly string ComponentPrefix =

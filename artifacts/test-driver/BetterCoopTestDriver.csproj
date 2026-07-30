@@ -4,8 +4,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Deterministic>true</Deterministic>
-    <AssemblyName>CoopGuardTestDriver</AssemblyName>
-    <RootNamespace>CoopGuardTestDriver</RootNamespace>
+    <AssemblyName>BetterCoopTestDriver</AssemblyName>
+    <RootNamespace>BetterCoopTestDriver</RootNamespace>
     <Version>0.0.1</Version>
     <Sts2Path Condition="'$(Sts2Path)' == ''">$(MSBuildProjectDirectory)/../runtime-base-v0.2.0-20260727-1905</Sts2Path>
     <Sts2DataDir>$(Sts2Path)/data_sts2_windows_x86_64</Sts2DataDir>
@@ -24,14 +24,14 @@
       <HintPath>$(Sts2DataDir)/sts2.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference Include="CoopGuard">
-      <HintPath>$(MSBuildProjectDirectory)/../../src/CoopGuard/bin/Release/net9.0/CoopGuard.dll</HintPath>
+    <Reference Include="BetterCoop">
+      <HintPath>$(MSBuildProjectDirectory)/../../src/BetterCoop/bin/Release/net9.0/BetterCoop.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="CoopGuardTestDriver.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="BetterCoopTestDriver.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <Target Name="CheckSts2Path" BeforeTargets="ResolveReferences">

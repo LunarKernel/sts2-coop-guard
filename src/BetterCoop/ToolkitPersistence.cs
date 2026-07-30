@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-namespace CoopGuard;
+namespace BetterCoop;
 
 internal sealed record ToolkitPreferences(
     int Schema,
@@ -612,7 +612,7 @@ public static class ToolkitReportHistory
             if ((File.GetAttributes(root) & FileAttributes.ReparsePoint) != 0)
             {
                 throw new InvalidDataException(
-                    "The CoopGuard report directory cannot be a reparse point.");
+                    "The BetterCoop report directory cannot be a reparse point.");
             }
 
             string stamp = DateTimeOffset.UtcNow.ToString(
@@ -834,7 +834,7 @@ public static class ToolkitReportHistory
             || !fileName.StartsWith("report-", StringComparison.Ordinal)
             || !fileName.EndsWith(".txt", StringComparison.Ordinal))
         {
-            status = "Invalid CoopGuard report name.";
+            status = "Invalid BetterCoop report name.";
             return false;
         }
 
@@ -858,7 +858,7 @@ public static class ToolkitCrashMarker
         if ((File.GetAttributes(fullRoot) & FileAttributes.ReparsePoint) != 0)
         {
             throw new InvalidDataException(
-                "The CoopGuard data directory cannot be a reparse point.");
+                "The BetterCoop data directory cannot be a reparse point.");
         }
 
         string marker = Path.Combine(fullRoot, "session.marker");

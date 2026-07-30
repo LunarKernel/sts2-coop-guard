@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.Json;
 
-namespace CoopGuard;
+namespace BetterCoop;
 
 internal sealed record SettingsProviderDeclaration(
     string OwnerModId,

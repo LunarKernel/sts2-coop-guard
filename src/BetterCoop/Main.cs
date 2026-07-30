@@ -2,12 +2,12 @@ using HarmonyLib;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Modding;
 
-namespace CoopGuard;
+namespace BetterCoop;
 
 [ModInitializer(nameof(Initialize))]
 public static class Main
 {
-    public const string ModId = "CoopGuard";
+    public const string ModId = "BetterCoop";
     private const string GuardSentinelOwner = ModId + ".guard.sentinel";
     private const string GuardOwner = ModId + ".guard";
     private const string DiagnosticsOwner = ModId + ".diagnostics";
@@ -59,7 +59,7 @@ public static class Main
         {
             ModFingerprint.MarkInitializationFailure(ex);
             Log.Error(
-                "CoopGuard Guard installation failed. Multiplayer will fail closed: "
+                "BetterCoop Guard installation failed. Multiplayer will fail closed: "
                     + ex);
         }
 

@@ -1,6 +1,6 @@
 # Multiplayer Toolkit implementation status
 
-Target: CoopGuard `v0.4.0`, STS2 `v0.109.1` (`c8c577f6`), .NET `9.0.7`.
+Target: BetterCoop `v0.5.0`, STS2 `v0.109.1` (`c8c577f6`), .NET `9.0.7`.
 
 Status meanings:
 

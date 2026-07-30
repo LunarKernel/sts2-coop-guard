@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 
-namespace CoopGuard;
+namespace BetterCoop;
 
 public enum ObservationSource
 {

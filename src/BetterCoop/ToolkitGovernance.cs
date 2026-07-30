@@ -6,9 +6,9 @@ using System.Text.Json;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Modding;
 
-namespace CoopGuard;
+namespace BetterCoop;
 
-public static class CoopGuardApi
+public static class BetterCoopApi
 {
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static bool PublishDeterministicSettings(
@@ -114,7 +114,7 @@ internal sealed record DeterministicSettingStamp(
 
 internal static class SettingsDeclarationCatalog
 {
-    public const string FileName = "coopguard.settings.json";
+    public const string FileName = "bettercoop.settings.json";
 
     public static IReadOnlyDictionary<string, SettingsProviderDeclaration>
         Load(IEnumerable<Mod> source)
@@ -1222,15 +1222,15 @@ internal static class LocalModDoctor
                 "[Confirmed] package guard: " + Safe(error, 1024)));
 
             StringBuilder report = new();
-            report.AppendLine("CoopGuard Local Mod Doctor");
+            report.AppendLine("BetterCoop Local Mod Doctor");
             report.AppendLine(
                 $"Inspected: {Math.Min(mods.Length, MaxMods)} native Mod records");
             report.AppendLine(
-                "Scope: native ModManager state/errors, duplicate IDs, dependency graph, deterministic-settings declarations, source overlap and CoopGuard package freshness.");
+                "Scope: native ModManager state/errors, duplicate IDs, dependency graph, deterministic-settings declarations, source overlap and BetterCoop package freshness.");
             report.AppendLine(
                 "Read-only: no Mod was enabled, disabled, moved, removed, downloaded or patched.");
             report.AppendLine(
-                "G9 wire: disabled on STS2 0.109.1 because native PacketReader.ReadString allocates from a peer length before applying a fixed bound; protocol 4 remains strict, while local lockfile categories remain available.");
+                "G9 wire: disabled on STS2 0.109.1 because native PacketReader.ReadString allocates from a peer length before applying a fixed bound; protocol 5 remains strict, while local lockfile categories remain available.");
             report.AppendLine("Settings declarations:");
             foreach (string status in settingsStatus.Take(MaxMods * 2))
             {
@@ -1261,7 +1261,7 @@ internal static class LocalModDoctor
         }
         catch (Exception ex)
         {
-            return "CoopGuard Local Mod Doctor\n"
+            return "BetterCoop Local Mod Doctor\n"
                 + "[Inconclusive] Inspection unavailable: "
                 + Safe(ex.GetType().Name, 100)
                 + ". No files or Mod state were changed.";
@@ -1310,7 +1310,7 @@ internal static class HarmonyConflictReport
     {
         try
         {
-            StringBuilder report = new("CoopGuard Harmony conflict map\n");
+            StringBuilder report = new("BetterCoop Harmony conflict map\n");
             int count = 0;
             foreach (MethodBase target in Harmony.GetAllPatchedMethods()
                          .OrderBy(MethodName, StringComparer.Ordinal))
@@ -1402,7 +1402,7 @@ internal static class HarmonyConflictReport
         }
         catch (Exception ex)
         {
-            return "CoopGuard Harmony conflict map\n"
+            return "BetterCoop Harmony conflict map\n"
                 + "[Inconclusive] Metadata inspection unavailable: "
                 + LocalModDoctor.Safe(ex.GetType().Name, 100);
         }
@@ -1471,7 +1471,7 @@ internal static class KnownIssueCatalog
             null,
             "RunInProgress",
             "Confirmed",
-            "This game build has no verified production contract for CoopGuard to rejoin a run already in progress.",
+            "This game build has no verified production contract for BetterCoop to rejoin a run already in progress.",
             "Use manual re-entry only before the run starts. Keep the native save and restart instead of forcing recovery.")
     ];
 
@@ -1541,7 +1541,7 @@ internal static class KnownIssueCatalog
     {
         KnownIssueQuery query = new(gameBuild, null, null, string.Empty);
         _ = ValidateAndMatch(BuiltIn, query, out string status);
-        StringBuilder report = new("CoopGuard built-in known issues\n");
+        StringBuilder report = new("BetterCoop built-in known issues\n");
         report.AppendLine(status);
         foreach (KnownIssueRule rule in BuiltIn.Where(rule =>
                      string.Equals(

@@ -1,0 +1,12 @@
+{
+  "id": "BetterCoop",
+  "name": "BetterCoop",
+  "author": "LunarKernel",
+  "description": "A safety-first multiplayer toolkit with package compatibility checks, a co-op cockpit, coordination, diagnosis, environment tools, and consent-gated forensics.",
+  "version": "v0.5.0",
+  "min_game_version": "0.109.1",
+  "has_pck": false,
+  "has_dll": true,
+  "dependencies": [],
+  "affects_gameplay": true
+}

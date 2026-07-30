@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace CoopGuard;
+namespace BetterCoop;
 
 [Flags]
 public enum ToolkitFeature : ulong

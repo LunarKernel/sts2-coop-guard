@@ -4,9 +4,9 @@ artifacts/*
 !artifacts/test-driver/
 artifacts/test-driver/*
 !artifacts/test-driver/Main.cs
-!artifacts/test-driver/CoopGuardTestDriver.csproj
-!artifacts/test-driver/CoopGuardTestDriver.json
-!artifacts/test-driver/coopguard.settings.json
+!artifacts/test-driver/BetterCoopTestDriver.csproj
+!artifacts/test-driver/BetterCoopTestDriver.json
+!artifacts/test-driver/bettercoop.settings.json
 bin/
 obj/
 .idea/

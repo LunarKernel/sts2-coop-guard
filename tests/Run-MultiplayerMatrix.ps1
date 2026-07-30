@@ -27,8 +27,8 @@ $game = [IO.Path]::GetFullPath($GameRoot)
 $artifacts = [IO.Path]::GetFullPath($ArtifactRoot)
 $seed = [IO.Path]::GetFullPath($SeedSettingsPath)
 $exe = Join-Path $game 'SlayTheSpire2.exe'
-$guardDll = Join-Path $PSScriptRoot '..\src\CoopGuard\bin\Release\net9.0\CoopGuard.dll'
-$driverProject = Join-Path $PSScriptRoot '..\artifacts\test-driver\CoopGuardTestDriver.csproj'
+$guardDll = Join-Path $PSScriptRoot '..\src\BetterCoop\bin\Release\net9.0\BetterCoop.dll'
+$driverProject = Join-Path $PSScriptRoot '..\artifacts\test-driver\BetterCoopTestDriver.csproj'
 
 if (!(Test-Path -LiteralPath $exe -PathType Leaf) -or
     !(Test-Path -LiteralPath $seed -PathType Leaf) -or
@@ -51,10 +51,10 @@ foreach ($count in $PlayerCounts) {
     }
 }
 
-dotnet build (Join-Path $PSScriptRoot '..\src\CoopGuard\CoopGuard.csproj') `
+dotnet build (Join-Path $PSScriptRoot '..\src\BetterCoop\BetterCoop.csproj') `
     -c Release "-p:Sts2Path=$game"
 if ($LASTEXITCODE -ne 0) {
-    throw 'CoopGuard Release build failed.'
+    throw 'BetterCoop Release build failed.'
 }
 
 dotnet build $driverProject -c Debug "-p:Sts2Path=$game"
@@ -62,25 +62,25 @@ if ($LASTEXITCODE -ne 0) {
     throw 'Debug-only test driver build failed.'
 }
 
-$guardMod = Join-Path $game 'mods\CoopGuard'
-$driverMod = Join-Path $game 'mods\CoopGuardTestDriver'
+$guardMod = Join-Path $game 'mods\BetterCoop'
+$driverMod = Join-Path $game 'mods\BetterCoopTestDriver'
 if (!(Test-Path -LiteralPath $guardMod -PathType Container) -or
     !(Test-Path -LiteralPath $driverMod -PathType Container)) {
-    throw 'The isolated game copy must contain CoopGuard and CoopGuardTestDriver Mod folders.'
+    throw 'The isolated game copy must contain BetterCoop and BetterCoopTestDriver Mod folders.'
 }
 
 Copy-Item -LiteralPath $guardDll -Destination (
-    Join-Path $guardMod 'CoopGuard.dll') -Force
+    Join-Path $guardMod 'BetterCoop.dll') -Force
 $driverOutput = Join-Path $PSScriptRoot '..\artifacts\test-driver\bin\Debug\net9.0'
 foreach ($name in @(
-        'CoopGuardTestDriver.dll',
-        'CoopGuardTestDriver.json')) {
+        'BetterCoopTestDriver.dll',
+        'BetterCoopTestDriver.json')) {
     Copy-Item -LiteralPath (Join-Path $driverOutput $name) `
         -Destination (Join-Path $driverMod $name) -Force
 }
 Copy-Item -LiteralPath (
-    Join-Path $PSScriptRoot '..\artifacts\test-driver\coopguard.settings.json') `
-    -Destination (Join-Path $driverMod 'coopguard.settings.json') -Force
+    Join-Path $PSScriptRoot '..\artifacts\test-driver\bettercoop.settings.json') `
+    -Destination (Join-Path $driverMod 'bettercoop.settings.json') -Force
 
 [IO.Directory]::CreateDirectory($artifacts) | Out-Null
 $summary = [Collections.Generic.List[object]]::new()
@@ -149,8 +149,8 @@ foreach ($players in $PlayerCounts) {
 
     [IO.Directory]::CreateDirectory($scenario) | Out-Null
     [IO.File]::WriteAllText(
-        (Join-Path $scenario '.coopguard-isolated-test'),
-        'CoopGuard F7/F8 isolated profile marker.')
+        (Join-Path $scenario '.bettercoop-isolated-test'),
+        'BetterCoop F7/F8 isolated profile marker.')
     $port = 34770 + $players
     $processes =
         [Collections.Generic.List[Diagnostics.Process]]::new()

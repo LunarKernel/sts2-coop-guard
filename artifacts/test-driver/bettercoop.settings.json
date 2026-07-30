@@ -2,7 +2,7 @@
   "Schema": 1,
   "Providers": [
     {
-      "Id": "CoopGuardTestDriver",
+      "Id": "BetterCoopTestDriver",
       "Schema": 1
     }
   ]

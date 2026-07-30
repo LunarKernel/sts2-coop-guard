@@ -12,7 +12,7 @@ using MegaCrit.Sts2.Core.Random;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 
-namespace CoopGuard;
+namespace BetterCoop;
 
 internal static class ToolkitForensicsRuntime
 {

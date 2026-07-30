@@ -12,7 +12,7 @@ using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using MegaCrit.Sts2.Core.Nodes.Screens.CustomRun;
 using MegaCrit.Sts2.Core.Nodes.Screens.DailyRun;
 
-namespace CoopGuard;
+namespace BetterCoop;
 
 internal static class CompatibilityGate
 {
@@ -32,7 +32,7 @@ internal static class CompatibilityGate
             return true;
         }
 
-        reason = "CoopGuard could not verify the local Mod packages:\n"
+        reason = "BetterCoop could not verify the local Mod packages:\n"
             + string.Join('\n', snapshot.Errors.Take(6));
         return false;
     }

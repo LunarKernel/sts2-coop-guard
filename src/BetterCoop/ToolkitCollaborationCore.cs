@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace CoopGuard;
+namespace BetterCoop;
 
 public enum ToolkitConsentFeature : byte
 {

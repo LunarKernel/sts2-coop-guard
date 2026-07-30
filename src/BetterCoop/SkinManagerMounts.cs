@@ -2,7 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using MegaCrit.Sts2.Core.Modding;
 
-namespace CoopGuard;
+namespace BetterCoop;
 
 internal static class SkinManagerMounts
 {
@@ -160,7 +160,7 @@ internal static class SkinManagerMounts
             || parsedAssemblyHash != SupportedMainAssemblyHash)
         {
             throw new InvalidDataException(
-                "The current STS2 build is not supported by this CoopGuard version.");
+                "The current STS2 build is not supported by this BetterCoop version.");
         }
     }
 }

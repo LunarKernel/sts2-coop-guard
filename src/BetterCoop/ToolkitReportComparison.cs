@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace CoopGuard;
+namespace BetterCoop;
 
 public enum ReportComparisonConfidence
 {
@@ -12,7 +12,7 @@ public enum ReportComparisonConfidence
 
 public sealed record ParsedToolkitReport(
     int Format,
-    string CoopGuardVersion,
+    string BetterCoopVersion,
     DateTimeOffset CapturedUtc,
     string GameVersion,
     string SessionId,
@@ -36,7 +36,7 @@ public static class ToolkitReportComparison
     public const int MaxInputBytes = 1024 * 1024;
     public const int MaxDisplayedDifferences = 200;
     public const string ClipboardSeparator =
-        "\n--- COOPGUARD REPORT B ---\n";
+        "\n--- BETTERCOOP REPORT B ---\n";
 
     private const int MaxLines = 4096;
     private const int MaxLineChars = 8192;
@@ -62,7 +62,7 @@ public static class ToolkitReportComparison
         {
             error =
                 "Clipboard must contain exactly two reports separated by "
-                + "--- COOPGUARD REPORT B ---.";
+                + "--- BETTERCOOP REPORT B ---.";
             return false;
         }
 
@@ -130,9 +130,9 @@ public static class ToolkitReportComparison
         List<string> differences = [];
         int totalDifferences = 0;
         CompareValue(
-            "CoopGuard version",
-            first.CoopGuardVersion,
-            second.CoopGuardVersion,
+            "BetterCoop version",
+            first.BetterCoopVersion,
+            second.BetterCoopVersion,
             common,
             differences,
             ref totalDifferences);
@@ -195,7 +195,7 @@ public static class ToolkitReportComparison
 
         List<string> lines =
         [
-            "CoopGuard offline report comparison",
+            "BetterCoop offline report comparison",
             $"Structured comparison: {(structured ? "available" : "unavailable")}",
             $"Reports: A={first.Role} {first.CapturedUtc:O}; B={second.Role} {second.CapturedUtc:O}",
             $"Session: {(sameSession ? first.SessionId : "not aligned")}",
@@ -264,9 +264,9 @@ public static class ToolkitReportComparison
         }
 
         if (lines.Length == 0
-            || lines[0] != "CoopGuard diagnostic report")
+            || lines[0] != "BetterCoop diagnostic report")
         {
-            error = "Not a CoopGuard diagnostic report.";
+            error = "Not a BetterCoop diagnostic report.";
             return false;
         }
 
@@ -276,7 +276,7 @@ public static class ToolkitReportComparison
                 NumberStyles.None,
                 CultureInfo.InvariantCulture,
                 out int format)
-            || !UniqueField(lines, "CoopGuard version: ", out string version)
+            || !UniqueField(lines, "BetterCoop version: ", out string version)
             || !UniqueField(lines, "Captured UTC: ", out string capturedText)
             || !DateTimeOffset.TryParseExact(
                 capturedText,
@@ -486,7 +486,7 @@ public static class ToolkitReportComparison
             false,
             ReportComparisonConfidence.Low,
             0,
-            "CoopGuard offline report comparison\n"
+            "BetterCoop offline report comparison\n"
             + "Structured comparison: unavailable\n"
             + "Input rejected: "
             + error

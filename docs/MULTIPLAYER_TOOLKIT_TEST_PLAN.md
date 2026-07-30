@@ -3,7 +3,7 @@
 ## 1. Purpose
 
 This plan defines the release evidence for the multiplayer-toolkit expansion
-of CoopGuard. It covers:
+of BetterCoop. It covers:
 
 - **F1** — hierarchical state digests;
 - **F2** — first-divergence locator;
@@ -21,7 +21,7 @@ fail-closed lobby-gate, incident-explanation and redaction checks.
 
 Every test level must preserve these invariants:
 
-1. CoopGuard never repairs, rolls back, resumes, cancels or otherwise mutates
+1. BetterCoop never repairs, rolls back, resumes, cancels or otherwise mutates
    combat, run, player, RNG or save state.
 2. A test never calls `ChecksumTracker.GenerateChecksum` or any equivalent
    checksum entry point merely to obtain a test observation. Tests observe only
@@ -94,7 +94,7 @@ Requirement IDs are permanent and are the source of truth for traceability.
 
 ### F4 — RNG-count sentinel
 
-- `CG-REQ-F4-001`: An audited postfix may increment a CoopGuard-owned counter
+- `CG-REQ-F4-001`: An audited postfix may increment a BetterCoop-owned counter
   when STS2 actually consumes from an RNG stream. Record only bounded stream
   identity and already-observed count at natural checkpoints; never record RNG
   state or values.
@@ -203,7 +203,7 @@ implementation details may change without changing the ID.
 Each automated result must emit:
 
 - test ID and requirement IDs;
-- CoopGuard assembly/manifest/protocol version;
+- BetterCoop assembly/manifest/protocol version;
 - STS2 version, commit, main-assembly hash and bundled .NET version;
 - topology, peer role/client ID and deterministic seed;
 - enabled fault IDs and their target peer;
@@ -257,14 +257,14 @@ These tests are mandatory before a feature can be called complete.
 | `CG-TST-F3-CMP-001` | Normal | Observe an already-public native action begin/completion and naturally generated checkpoint. Sequence/time ordering is stable; the journal contains only allowlisted category/actor/checkpoint fields. | `CG-REQ-F3-001`, `CG-REQ-F3-003` |
 | `CG-TST-F3-SEC-002` | Abnormal | Inject duplicates, late observations, oversized labels, an action whose `ToString()` contains a path/secret and more events than capacity. Raw arguments are never evaluated/copied, oldest entries are evicted and memory/output remain bounded. | `CG-REQ-F3-001`, `CG-REQ-F3-002` |
 | `CG-TST-F3-E2E-003` | Degraded | Make clipboard/modal/report rendering unavailable. Timeline collection remains bounded, gameplay continues, and the failure is logged without altering the compatibility gate. | `CG-REQ-F3-002`, `CG-REQ-F3-003` |
-| `CG-TST-F4-CTR-001` | Normal | Run audited RNG calls through the natural game path on matching peers. Postfix counters match at a natural checkpoint; spies prove CoopGuard never invokes an RNG method or extra-checksum entry point and records no value/state. | `CG-REQ-F4-001`, `CG-REQ-F4-002`, `CG-REQ-CORE-001` |
+| `CG-TST-F4-CTR-001` | Normal | Run audited RNG calls through the natural game path on matching peers. Postfix counters match at a natural checkpoint; spies prove BetterCoop never invokes an RNG method or extra-checksum entry point and records no value/state. | `CG-REQ-F4-001`, `CG-REQ-F4-002`, `CG-REQ-CORE-001` |
 | `CG-TST-F4-UT-002` | Abnormal | Feed unequal already-observed counts for one allowlisted stream at the same checkpoint. Identify the first count mismatch without serializing RNG state/value, predicting the next value or mapping it to a causal Mod. | `CG-REQ-F4-001`, `CG-REQ-F4-002` |
 | `CG-TST-F4-UPG-003` | Degraded | An audited RNG method signature changes or the patch cannot install. Mark the entire RNG-count category unsupported, uninstall any partial hooks and preserve all other diagnostics/gates. | `CG-REQ-F4-003`, `CG-REQ-CORE-004` |
 | `CG-TST-F4-MP2-004` | Multiplayer | Matching peers execute the same audited natural RNG calls and compare count tags at the next natural checkpoint; a fixture alters only its reported test counter in a second run. Equality/mismatch is correct and invocation spies prove zero extra RNG/checksum calls. | `CG-REQ-F4-001`, `CG-REQ-F4-002`, `CG-REQ-F4-003` |
 | `CG-TST-F5-MP4-001` | Normal | Four peers use one scheduler while idle, loading, sending C1 status, C9 snapshots and F1 tags. Liveness/state converge; envelope rate/payload stay within budgets and H3 becomes stale only after two missed 2-second keepalives plus 1-second grace. | `CG-REQ-F5-001`, `CG-REQ-F5-003` |
 | `CG-TST-F5-SEC-002` | Abnormal | Send unknown-peer, malformed, replayed and rate-excess heartbeat inputs. They are ignored/rate-limited without exception, identity confusion or unbounded allocation. | `CG-REQ-F5-001`, `CG-REQ-F5-002` |
 | `CG-TST-F5-MP2-003` | Degraded | Delay/drop toolkit heartbeats while STS2 native traffic still progresses and while the remote reports loading. Toolkit status degrades but never disconnects, pauses or overrides native status. | `CG-REQ-F5-003`, `CG-REQ-CORE-001` |
-| `CG-TST-F6-CMP-001` | Normal | A fixture Mod with a package-hashed settings declaration pushes one valid settings digest through the Guard API, then a cached state digest and fixed public event through the optional API. CoopGuard stores only bounded copies, routes them to independent owners and never calls back into the fixture. | `CG-REQ-F6-001` |
+| `CG-TST-F6-CMP-001` | Normal | A fixture Mod with a package-hashed settings declaration pushes one valid settings digest through the Guard API, then a cached state digest and fixed public event through the optional API. BetterCoop stores only bounded copies, routes them to independent owners and never calls back into the fixture. | `CG-REQ-F6-001` |
 | `CG-TST-F6-SEC-002` | Abnormal | Fixture uses the wrong manifest identity/schema, invalid event code, oversized/high-rate/concurrent calls and malformed digests, then changes a valid settings digest after freeze. Calls return bounded failures, no exception crosses the Mod boundary, no delegate is retained, memory stays bounded and the late change sets restart-required without replacing the frozen entry. | `CG-REQ-F6-002`, `CG-REQ-CORE-003` |
 | `CG-TST-F6-UPG-003` | Degraded | An optional checkpoint publisher requests an unsupported API version and degrades locally; separately, a Mod with a declared G10 provider omits its required settings digest and the existing Guard gate fails closed. | `CG-REQ-F6-003`, `CG-REQ-CORE-002` |
 | `CG-TST-F6-CMP-004` | Isolation | Force the Optional Diagnostics API/module to throw and trip its circuit breaker after a valid settings digest is frozen. The optional category disables, while the frozen Guard entry and ready/start decision remain unchanged. | `CG-REQ-F6-001`, `CG-REQ-F6-003`, `CG-REQ-CORE-001` |
@@ -288,11 +288,11 @@ These tests are mandatory before a feature can be called complete.
 | `CG-TST-CORE-MP2-003` | Force the optional plane off, corrupt it and trip its circuit breaker in matching two-peer runs. Native join/ready/start and Guard decisions remain byte-for-byte equivalent to the disabled baseline. | `CG-REQ-CORE-001`, `CG-REQ-CORE-002` |
 | `CG-TST-CORE-MP3-004` | Sequential third-peer join, leave, lobby re-entry and session rollover exercise bounded Hello/ACK retries; old-session messages are rejected and no one-time broadcast is required. | `CG-REQ-CORE-001`, `CG-REQ-CORE-004` |
 | `CG-TST-CORE-MP4-005` | Four peers exercise idle/load/play, two degraded modules, backpressure and cleanup; one peer cannot make another peer's row healthy or allocate outside its quota. | `CG-REQ-CORE-001`, `CG-REQ-CORE-003` |
-| `CG-TST-CORE-UPG-006` | In the same Release parser fixture, inject an unknown Diagnostics major; only the optional plane disables. A genuinely different CoopGuard package is separately rejected by native Guard before lobby. | `CG-REQ-CORE-002`, `CG-REQ-CORE-004` |
-| `CG-TST-CORE-CTR-007` | Audit native `InitialGameInfoMessage` Mod-list count, single-string length and aggregate UTF-8 byte limits with actual allocation measurements before enabling G9/G10 vector expansion. Failure keeps protocol 4 behavior. | `CG-REQ-CORE-001`, `CG-REQ-CORE-004` |
+| `CG-TST-CORE-UPG-006` | In the same Release parser fixture, inject an unknown Diagnostics major; only the optional plane disables. A genuinely different BetterCoop package is separately rejected by native Guard before lobby. | `CG-REQ-CORE-002`, `CG-REQ-CORE-004` |
+| `CG-TST-CORE-CTR-007` | Audit native `InitialGameInfoMessage` Mod-list count, single-string length and aggregate UTF-8 byte limits with actual allocation measurements before enabling G9/G10 vector expansion. Failure keeps protocol 5 behavior. | `CG-REQ-CORE-001`, `CG-REQ-CORE-004` |
 | `CG-TST-CORE-MP4-008` | Exhaustively permute C9 OptIn/Commit/Active, member join/rejoin/revoke and old hand updates. No invalid epoch sends/decodes/displays data; local revoke is synchronous. | `CG-REQ-CORE-001`, `CG-REQ-CORE-003` |
 | `CG-TST-CORE-MP4-009` | Forensics starts only after unanimous current-epoch Active; member change/revoke clears tags. A state digest published after checkpoint callback entry is used only at the next natural checkpoint without waiting. | `CG-REQ-F1-003`, `CG-REQ-F6-004`, `CG-REQ-CORE-001`, `CG-REQ-CORE-006` |
-| `CG-TST-CORE-CMP-010` | Remove one optional Harmony target and throw during another module's install. Only those owners roll back/disable; `coopguard.guard` targets, health and native gate output are unchanged. | `CG-REQ-CORE-001`, `CG-REQ-CORE-004`, `CG-REQ-CORE-007` |
+| `CG-TST-CORE-CMP-010` | Remove one optional Harmony target and throw during another module's install. Only those owners roll back/disable; `bettercoop.guard` targets, health and native gate output are unchanged. | `CG-REQ-CORE-001`, `CG-REQ-CORE-004`, `CG-REQ-CORE-007` |
 | `CG-TST-CORE-A11Y-011` | Render every new surface in Simplified/Traditional Chinese and English fallback at 100/150/200% scale; complete keyboard/controller traversal, contrast and color-independent/sound-alternative checks with bounded hostile names. | `CG-REQ-CORE-003`, `CG-REQ-CORE-005` |
 | `CG-TST-CORE-MP3-012` | After comparable F1/F2/F4 checkpoints, disconnect one peer, attempt the current unsupported running rejoin, then form a new lobby/session with the same peers. Disconnect synchronously clears Forensics history; old epoch tags/counters are rejected before cache, and the new session never merges old last-common/divergent checkpoints. | `CG-REQ-F1-003`, `CG-REQ-F2-003`, `CG-REQ-F4-003`, `CG-REQ-CORE-006` |
 | `CG-TST-CORE-SEC-013` | Enumerate every Diagnostics schema/handler and inspect optional-module call edges: only documented structured fields/IDs exist, injected free text/control/URL/path fields are rejected, and no handler can reach action/run/player/RNG/save mutation APIs. Reuse the F8 Release-package security gate to prove no fault handler/switch is present. | `CG-REQ-CORE-001`, `CG-REQ-CORE-003`, `CG-REQ-F8-002` |
@@ -346,7 +346,7 @@ used:
   `RunInProgress` rejection for running sessions;
 - action-queue observable events and natural checksum events;
 - the optional `PlayerChoiceSynchronizer.WaitForRemoteChoice(...)`
-  prefix/finalizer signature, with an invocation spy proving CoopGuard never
+  prefix/finalizer signature, with an invocation spy proving BetterCoop never
   calls it;
 - native divergence message and the read-only projection used by F1;
 - every F1 forbidden member (card identity/order, choice candidates, seed,
@@ -398,7 +398,7 @@ User-visible E2E checks include:
 
 A state-divergence fixture may create a one-sided difference only in an
 isolated test Mod through a normal game-action path. The test then waits for
-STS2's next natural checkpoint. CoopGuard and the harness must not mutate the
+STS2's next natural checkpoint. BetterCoop and the harness must not mutate the
 state, repair it or request an extra checksum.
 
 ### 6.6 Soak
@@ -424,7 +424,7 @@ Test:
 - current/previous Guard 发布包（必须由原生包校验拒绝）；
 - 同一发布包内 Diagnostics 本地关闭/API 不可用，以及注入的未知 major
   parser 防御；不把它描述成 mixed Release lobby；
-- current/missing CoopGuard（必须由原生包校验拒绝）；
+- current/missing BetterCoop（必须由原生包校验拒绝）；
 - equal protocol with different package bytes;
 - supported and unknown STS2 build tuples;
 - current/previous F6 Mod-author API versions;
@@ -455,7 +455,7 @@ documented bounded fields. Clipboard remains user-initiated. No test artifact
 with raw identifiers or paths may be uploaded by CI.
 
 Release-package inspection must confirm that F8 command-line switches, fault
-handlers and fault payloads are absent from `CoopGuard.dll`.
+handlers and fault payloads are absent from `BetterCoop.dll`.
 
 ### 6.9 Accessibility
 
@@ -477,7 +477,7 @@ For every new visible surface:
 ## 7. Fault-injection catalog
 
 F8 should reuse a separate test-driver Mod/process where possible. Production
-CoopGuard should not own fault branches.
+BetterCoop should not own fault branches.
 
 | Fault ID | Injection | Allowed scope | Expected observation |
 |---|---|---|---|
@@ -506,7 +506,7 @@ boundary, not by holding game actions or modifying STS2 timers.
 
 Use positive sentinels, not log silence:
 
-- process initialized the expected CoopGuard assembly/manifest;
+- process initialized the expected BetterCoop assembly/manifest;
 - full local fingerprint completed;
 - expected peer IDs joined and entered the intended lobby/run state;
 - every ready gate completed or was blocked for the expected reason;

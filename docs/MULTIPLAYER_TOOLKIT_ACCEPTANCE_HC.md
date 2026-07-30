@@ -1,7 +1,7 @@
 # Multiplayer Toolkit H/C 验收契约
 
 状态：设计验收草案，不代表功能已经实现。
-基线：Slay the Spire 2 `v0.109.1`；CoopGuard 的 Guard、指纹握手和故障说明仍是独立核心。
+基线：Slay the Spire 2 `v0.109.1`；BetterCoop 的 Guard、指纹握手和故障说明仍是独立核心。
 
 ## 全局硬性边界
 
@@ -103,7 +103,7 @@
 
 **降级/失败行为**
 
-- 同一 CoopGuard 发布包中本地关闭 Toolkit、平台 API 不可用或模块初始化失败的
+- 同一 BetterCoop 发布包中本地关闭 Toolkit、平台 API 不可用或模块初始化失败的
   玩家显示“Toolkit 不可用”，大厅与 Guard 仍按原规则运行。真正不同发布包会在
   进入大厅前被严格 Guard 拒绝，不属于 H3 降级场景。
 - 合并 keepalive 每 2 秒一次；连续漏掉两个周期并经过 1 秒容差（总计 `5 s`）
@@ -636,7 +636,7 @@
   重试次数为 0。
 - `AT-C06-03`（未来能力门禁）：只有新 STS2 构建存在已审计生产恢复消费者并通过
   真实双客户端“断线—原生快照—同一 run 恢复”测试后，才允许对 `Running`
-  显示按钮；否则测试结果必须是 Unsupported，不得用 CoopGuard 状态修复替代。
+  显示按钮；否则测试结果必须是 Unsupported，不得用 BetterCoop 状态修复替代。
 
 ## C7 声音提示
 

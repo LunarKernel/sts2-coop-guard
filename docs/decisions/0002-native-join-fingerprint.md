@@ -21,7 +21,7 @@ branches into fresh-lobby, loaded-lobby or running-game rejoin flows.
 
 Version 2 removes the custom `INetMessage` protocol.
 
-After Mod initialization, CoopGuard recursively hashes the regular files in
+After Mod initialization, BetterCoop recursively hashes the regular files in
 every loaded Mod root and appends one synthetic package-digest entry to the
 gameplay Mod list. STS2's existing `ModMismatch` path performs the peer check.
 The only package-specific exclusion is OnlineExchange `1.2.0`'s known generated

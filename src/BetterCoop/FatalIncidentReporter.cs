@@ -12,7 +12,7 @@ using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.Vfx;
 using MegaCrit.Sts2.Core.Runs;
 
-namespace CoopGuard;
+namespace BetterCoop;
 
 internal static class FatalIncidentReporter
 {
@@ -138,21 +138,21 @@ internal static class FatalIncidentReporter
             {
                 popup?.QueueFree();
                 Main.Log.Warn(
-                    "Could not show CoopGuard diagnosis because another modal is open.");
+                    "Could not show BetterCoop diagnosis because another modal is open.");
             }
         }
         catch (Exception ex)
         {
             // Diagnostic UI is fail-open; the compatibility gate remains fail-closed.
-            Main.Log.Error($"Could not show CoopGuard diagnosis: {ex}");
+            Main.Log.Error($"Could not show BetterCoop diagnosis: {ex}");
         }
     }
 
     public static void ShowVerified()
     {
         ShowNotice(
-            "CoopGuard：本机 Mod 完整校验通过",
-            "CoopGuard: full local Mod verification passed");
+            "BetterCoop：本机 Mod 完整校验通过",
+            "BetterCoop: full local Mod verification passed");
     }
 
     public static void ShowManualSnapshot()
@@ -167,7 +167,7 @@ internal static class FatalIncidentReporter
                     snapshot.TotalBytes,
                     IsChinese())
                 : IncidentExplainer.ExplainLocalVerification(
-                    "CoopGuard could not verify the local Mod packages:\n"
+                    "BetterCoop could not verify the local Mod packages:\n"
                         + string.Join('\n', snapshot.Errors.Take(6)),
                     IsChinese());
             incident = incident with
@@ -226,17 +226,17 @@ internal static class FatalIncidentReporter
         try
         {
             DisplayServer.ClipboardSet(report.Text);
-            Main.Log.Info("Copied a redacted CoopGuard diagnostic report.");
+            Main.Log.Info("Copied a redacted BetterCoop diagnostic report.");
             ShowNotice(
-                "CoopGuard：诊断已复制",
-                "CoopGuard: diagnosis copied");
+                "BetterCoop：诊断已复制",
+                "BetterCoop: diagnosis copied");
         }
         catch (Exception ex)
         {
             Main.Log.Error($"Could not copy the diagnostic report: {ex}");
             ShowNotice(
-                "CoopGuard：复制失败，请重试",
-                "CoopGuard: copy failed; please retry");
+                "BetterCoop：复制失败，请重试",
+                "BetterCoop: copy failed; please retry");
         }
 
         return true;
@@ -361,7 +361,7 @@ internal static class FatalIncidentReporter
         }
         catch (Exception ex)
         {
-            Main.Log.Error($"Could not show CoopGuard status: {ex}");
+            Main.Log.Error($"Could not show BetterCoop status: {ex}");
         }
     }
 

@@ -6,7 +6,7 @@ using MegaCrit.Sts2.Core.Multiplayer;
 using MegaCrit.Sts2.Core.Multiplayer.Serialization;
 using MegaCrit.Sts2.Core.Multiplayer.Transport;
 
-namespace CoopGuard;
+namespace BetterCoop;
 
 public sealed class ToolkitEnvelopeMessage : INetMessage
 {

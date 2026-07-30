@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Text.Json;
 using MegaCrit.Sts2.Core.Modding;
 
-namespace CoopGuard;
+namespace BetterCoop;
 
 internal sealed record FingerprintSnapshot(
     string Digest,
@@ -289,7 +289,7 @@ internal static class ModFingerprint
         {
             _restartRequired = true;
             _lastFailure = Failure(
-                "CoopGuard could not install its required multiplayer patches "
+                "BetterCoop could not install its required multiplayer patches "
                     + $"({exception.GetType().Name}).");
         }
     }

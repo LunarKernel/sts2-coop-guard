@@ -26,7 +26,7 @@ using MegaCrit.Sts2.Core.Saves;
 using MegaCrit.Sts2.Core.Saves.Managers;
 using MegaCrit.Sts2.Core.Saves.Runs;
 
-namespace CoopGuard;
+namespace BetterCoop;
 
 internal enum ToolkitSessionPhase
 {
@@ -146,7 +146,7 @@ internal static class ToolkitRuntime
 
     public static void Attach(NGame game)
     {
-        if (game.GetNodeOrNull<ToolkitNode>("CoopGuardToolkit")
+        if (game.GetNodeOrNull<ToolkitNode>("BetterCoopToolkit")
             is ToolkitNode existing)
         {
             existing.Initialize();
@@ -156,7 +156,7 @@ internal static class ToolkitRuntime
 
         ToolkitNode node = new()
         {
-            Name = "CoopGuardToolkit",
+            Name = "BetterCoopToolkit",
             ProcessMode = Node.ProcessModeEnum.Always
         };
         game.AddChild(node);
@@ -590,15 +590,15 @@ internal static class ToolkitRuntime
             if (RuntimeFuse.IsDisabled)
             {
                 return chinese
-                    ? "CoopGuard 工具已停用；Guard 仍正常"
-                    : "CoopGuard Toolkit disabled; Guard remains active";
+                    ? "BetterCoop 工具已停用；Guard 仍正常"
+                    : "BetterCoop Toolkit disabled; Guard remains active";
             }
 
             List<string> lines =
             [
                 chinese
-                    ? "CoopGuard 联机驾驶舱"
-                    : "CoopGuard Multiplayer Cockpit"
+                    ? "BetterCoop 联机驾驶舱"
+                    : "BetterCoop Multiplayer Cockpit"
             ];
             if (_networkState is { } observation
                 && observation.IsFresh(Stopwatch.GetTimestamp()))
@@ -957,7 +957,7 @@ internal static class ToolkitRuntime
             string input = DisplayServer.ClipboardGet();
             if (Encoding.UTF8.GetByteCount(input) > 16 * 1024)
             {
-                return "CoopGuard dependency-aware manual A/B plan\n"
+                return "BetterCoop dependency-aware manual A/B plan\n"
                     + "Plan unavailable: candidate input exceeds 16 KiB.\n"
                     + "No Mod or setting was changed.";
             }
@@ -983,7 +983,7 @@ internal static class ToolkitRuntime
         }
         catch (Exception ex)
         {
-            return "CoopGuard dependency-aware manual A/B plan\n"
+            return "BetterCoop dependency-aware manual A/B plan\n"
                 + "Plan unavailable: "
                 + FlightRecorder.BoundedText(ex.GetType().Name, 100)
                 + ".\nNo Mod or setting was changed.";
@@ -1177,7 +1177,7 @@ internal static class ToolkitRuntime
     private static void ShowLoadEnvironmentWarning(string evidence)
     {
         NErrorPopup? popup = NErrorPopup.Create(
-            "CoopGuard save environment warning / 存档环境警告",
+            "BetterCoop save environment warning / 存档环境警告",
             "[CG-SAVE-ENVIRONMENT-WARNING]\n"
             + FlightRecorder.BoundedText(evidence, 2048)
             + "\n\nThis is a local warning, not proof of compatibility. "
@@ -2638,22 +2638,22 @@ internal sealed class ToolkitNode : Node
             _modDoctorButton = HistoryButton(
                 "Open Mod Doctor / 打开 Mod 检查",
                 () => ShowReadOnlyReport(
-                    "CoopGuard Local Mod Doctor",
+                    "BetterCoop Local Mod Doctor",
                     LocalModDoctor.BuildReport()));
             _bisectPlanButton = HistoryButton(
                 "A/B plan from clipboard IDs / 从剪贴板生成二分计划",
                 () => ShowReadOnlyReport(
-                    "CoopGuard dependency-aware manual A/B plan",
+                    "BetterCoop dependency-aware manual A/B plan",
                     ToolkitRuntime.BuildBisectPlanFromClipboard()));
             _harmonyReportButton = HistoryButton(
                 "Harmony conflict map / Harmony 冲突图",
                 () => ShowReadOnlyReport(
-                    "CoopGuard Harmony conflict map",
+                    "BetterCoop Harmony conflict map",
                     HarmonyConflictReport.Build()));
             _knownIssuesButton = HistoryButton(
                 "Built-in known issues / 内置已知问题",
                 () => ShowReadOnlyReport(
-                    "CoopGuard built-in known issues",
+                    "BetterCoop built-in known issues",
                     KnownIssueCatalog.BuildReport(NGame.GetGameVersion())));
             _quickStatusSelect = new OptionButton
             {
@@ -2737,7 +2737,7 @@ internal sealed class ToolkitNode : Node
 
             string userRoot = ProjectSettings.GlobalizePath("user://");
             ToolkitRuntime.InitializePersistence(
-                Path.Combine(userRoot, "CoopGuard"),
+                Path.Combine(userRoot, "BetterCoop"),
                 Path.Combine(userRoot, "logs", "godot.log"));
             SetControlMode(ToolkitRuntime.PanelOpened);
             ApplyPreferences();
@@ -3269,7 +3269,7 @@ internal sealed class ToolkitNode : Node
         ToolkitReportComparisonResult comparison =
             ToolkitReportComparison.Compare(first, second);
         ShowReadOnlyReport(
-            "CoopGuard offline report comparison / 离线报告对比",
+            "BetterCoop offline report comparison / 离线报告对比",
             comparison.Text);
     }
 

@@ -17,12 +17,12 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Reflection;
 
-namespace CoopGuardTestDriver;
+namespace BetterCoopTestDriver;
 
 [ModInitializer(nameof(Initialize))]
 public static class Main
 {
-    private const string ModId = "CoopGuardTestDriver";
+    private const string ModId = "BetterCoopTestDriver";
     private static readonly Logger Log = new(ModId, LogType.Network);
 
     internal static int ExpectedPlayers { get; private set; }
@@ -78,11 +78,11 @@ public static class Main
         {
             byte[] settingsDigest = SHA256.HashData(
                 Encoding.UTF8.GetBytes("mode=stable\nplayers=2"));
-            if (!global::CoopGuard.CoopGuardApi.PublishDeterministicSettings(
+            if (!global::BetterCoop.BetterCoopApi.PublishDeterministicSettings(
                     ModId,
                     1,
                     settingsDigest)
-                || global::CoopGuard.CoopGuardApi.PublishDeterministicSettings(
+                || global::BetterCoop.BetterCoopApi.PublishDeterministicSettings(
                     "../" + ModId,
                     1,
                     settingsDigest))
@@ -158,7 +158,7 @@ public static class Main
                 ".." + Path.DirectorySeparatorChar,
                 StringComparison.Ordinal)
             || !File.Exists(
-                Path.Combine(root, ".coopguard-isolated-test")))
+                Path.Combine(root, ".bettercoop-isolated-test")))
         {
             throw new InvalidOperationException(
                 "F8 refused a live or unmarked profile target.");
@@ -187,7 +187,7 @@ public static class Main
         LateSettingsChange = false;
         byte[] changedDigest = SHA256.HashData(
             Encoding.UTF8.GetBytes("mode=changed\nplayers=2"));
-        if (global::CoopGuard.CoopGuardApi.PublishDeterministicSettings(
+        if (global::BetterCoop.BetterCoopApi.PublishDeterministicSettings(
                 ModId,
                 1,
                 changedDigest))
@@ -207,14 +207,14 @@ public static class Main
         }
 
         VerifyToolkit = false;
-        Godot.Node node = game.GetNodeOrNull("CoopGuardToolkit")
+        Godot.Node node = game.GetNodeOrNull("BetterCoopToolkit")
             ?? throw new InvalidOperationException(
                 "Toolkit node was not attached to NGame.");
         Type runtime = Type.GetType(
-                "CoopGuard.ToolkitRuntime, CoopGuard",
+                "BetterCoop.ToolkitRuntime, BetterCoop",
                 throwOnError: true)
             ?? throw new InvalidOperationException(
-                "Could not find CoopGuard Toolkit runtime.");
+                "Could not find BetterCoop Toolkit runtime.");
         string hud = (string?)AccessTools.Method(runtime, "HudText").Invoke(
                 null,
                 [false])
@@ -226,7 +226,7 @@ public static class Main
                 [false])
             ?? string.Empty;
         if (!hud.Contains(
-                "CoopGuard Multiplayer Cockpit",
+                "BetterCoop Multiplayer Cockpit",
                 StringComparison.Ordinal)
             || (!hud.Contains("State:", StringComparison.Ordinal)
                 && !hud.Contains(
@@ -254,7 +254,7 @@ public static class Main
                 "Toolkit cockpit leaked a raw privacy probe.");
         }
 
-        if (node.GetType().FullName != "CoopGuard.ToolkitNode")
+        if (node.GetType().FullName != "BetterCoop.ToolkitNode")
         {
             throw new InvalidOperationException(
                 $"Unexpected Toolkit node type: {node.GetType().FullName}.");
@@ -353,7 +353,7 @@ public static class Main
                 node.GetType(),
                 "_localTheme").GetValue(node)!;
         string preferencesPath = Godot.ProjectSettings.GlobalizePath(
-            "user://CoopGuard/preferences.json");
+            "user://BetterCoop/preferences.json");
         if (!soundButton.Visible
             || localTheme.DefaultFontSize < 36
             || !File.Exists(preferencesPath)
@@ -396,7 +396,7 @@ public static class Main
                 "CreateEnvironmentLockfile").Invoke(null, null)
             ?? string.Empty;
         Type doctorType = AccessTools.TypeByName(
-                "CoopGuard.LocalModDoctor")
+                "BetterCoop.LocalModDoctor")
             ?? throw new InvalidOperationException(
                 "LocalModDoctor was not found.");
         object dependencyRecords = AccessTools.Method(
@@ -405,7 +405,7 @@ public static class Main
             ?? throw new InvalidOperationException(
                 "Dependency records were unavailable.");
         Type plannerType = AccessTools.TypeByName(
-                "CoopGuard.ModBisectPlanner")
+                "BetterCoop.ModBisectPlanner")
             ?? throw new InvalidOperationException(
                 "ModBisectPlanner was not found.");
         object bisect = AccessTools.Method(
@@ -446,7 +446,7 @@ public static class Main
         }
 
         Type codec = AccessTools.TypeByName(
-                "CoopGuard.EnvironmentLockCodec")
+                "BetterCoop.EnvironmentLockCodec")
             ?? throw new InvalidOperationException(
                 "EnvironmentLockCodec was not found.");
         object?[] importedArguments =
@@ -500,23 +500,23 @@ public static class Main
                 "\"unknown-category\"",
                 StringComparison.Ordinal));
         string doctor = (string?)AccessTools.Method(
-                AccessTools.TypeByName("CoopGuard.LocalModDoctor"),
+                AccessTools.TypeByName("BetterCoop.LocalModDoctor"),
                 "BuildReport").Invoke(null, null)
             ?? string.Empty;
         string harmony = (string?)AccessTools.Method(
-                AccessTools.TypeByName("CoopGuard.HarmonyConflictReport"),
+                AccessTools.TypeByName("BetterCoop.HarmonyConflictReport"),
                 "Build").Invoke(null, null)
             ?? string.Empty;
         string knownIssues = (string?)AccessTools.Method(
-                AccessTools.TypeByName("CoopGuard.KnownIssueCatalog"),
+                AccessTools.TypeByName("BetterCoop.KnownIssueCatalog"),
                 "BuildReport").Invoke(null, [NGame.GetGameVersion()])
             ?? string.Empty;
         Type catalog = AccessTools.TypeByName(
-                "CoopGuard.KnownIssueCatalog")
+                "BetterCoop.KnownIssueCatalog")
             ?? throw new InvalidOperationException(
                 "KnownIssueCatalog was not found.");
         Type queryType = AccessTools.TypeByName(
-                "CoopGuard.KnownIssueQuery")
+                "BetterCoop.KnownIssueQuery")
             ?? throw new InvalidOperationException(
                 "KnownIssueQuery was not found.");
         object exactQuery = Activator.CreateInstance(
@@ -677,7 +677,7 @@ public static class Main
         try
         {
             Type protocol = Type.GetType(
-                    "CoopGuard.ToolkitDiagnosticsRuntime, CoopGuard",
+                    "BetterCoop.ToolkitDiagnosticsRuntime, BetterCoop",
                     throwOnError: true)
                 ?? throw new InvalidOperationException(
                     "Could not find diagnostics runtime.");
@@ -836,20 +836,20 @@ public static class Main
                         byte[] stateDigest = SHA256.HashData(
                             Encoding.UTF8.GetBytes(
                                 "optional-state-fixture-v1"));
-                        if (global::CoopGuard.CoopGuardApi.PublishStateDigest(
+                        if (global::BetterCoop.BetterCoopApi.PublishStateDigest(
                                 "../" + ModId,
                                 1,
                                 1,
                                 stateDigest)
-                            || !global::CoopGuard.CoopGuardApi.PublishStateDigest(
+                            || !global::BetterCoop.BetterCoopApi.PublishStateDigest(
                                 ModId,
                                 1,
                                 1,
                                 stateDigest)
-                            || !global::CoopGuard.CoopGuardApi.RecordPublicDiagnosticEvent(
+                            || !global::BetterCoop.BetterCoopApi.RecordPublicDiagnosticEvent(
                                 ModId,
                                 7)
-                            || global::CoopGuard.CoopGuardApi.RecordPublicDiagnosticEvent(
+                            || global::BetterCoop.BetterCoopApi.RecordPublicDiagnosticEvent(
                                 ModId,
                                 8))
                         {
@@ -914,11 +914,11 @@ public static class Main
 
         InjectPackageChangeAtInitialInfo = false;
         Mod guard = ModManager.Mods.Single(
-            mod => mod.manifest?.id == "CoopGuard");
+            mod => mod.manifest?.id == "BetterCoop");
         File.WriteAllText(
             Path.Combine(guard.path, "cgtest-toctou.marker"),
             "Injected after client preflight.");
-        Log.Info("Injected a package change immediately before CoopGuard's initial-info gate.");
+        Log.Info("Injected a package change immediately before BetterCoop's initial-info gate.");
     }
 
     internal static void VerifyDiagnosticPopup()
@@ -928,7 +928,7 @@ public static class Main
                 + "Authorization: Bearer bearer-secret "
                 + "\"password\":\"json-secret\" "
                 + "\\\\server\\share\\save.dat "
-                + "CoopGuard-package-v4-aaaaaaaa "
+                + "BetterCoop-package-v5-aaaaaaaa "
                 + new string('b', 64));
         NErrorPopup? popup;
         string reasonLabel;
@@ -940,10 +940,10 @@ public static class Main
         {
             DiagnosticReason = null;
             Type reporter = Type.GetType(
-                    "CoopGuard.FatalIncidentReporter, CoopGuard",
+                    "BetterCoop.FatalIncidentReporter, BetterCoop",
                     throwOnError: true)
                 ?? throw new InvalidOperationException(
-                    "Could not find CoopGuard incident reporter.");
+                    "Could not find BetterCoop incident reporter.");
             AccessTools.Method(reporter, "ShowManualSnapshot").Invoke(
                 null,
                 null);
@@ -958,10 +958,10 @@ public static class Main
         {
             DiagnosticReason = null;
             Type reporter = Type.GetType(
-                    "CoopGuard.FatalIncidentReporter, CoopGuard",
+                    "BetterCoop.FatalIncidentReporter, BetterCoop",
                     throwOnError: true)
                 ?? throw new InvalidOperationException(
-                    "Could not find CoopGuard incident reporter.");
+                    "Could not find BetterCoop incident reporter.");
             AccessTools.Method(reporter, "RememberInternalError").Invoke(
                 null,
                 [new MissingMethodException("RemovedGameApi")]);
@@ -1046,10 +1046,10 @@ public static class Main
                 [copyButton]);
         string copied = Godot.DisplayServer.ClipboardGet();
         if (!copied.Contains(
-                "CoopGuard diagnostic report",
+                "BetterCoop diagnostic report",
                 StringComparison.Ordinal)
             || !copied.Contains(
-                "CoopGuard version: 0.3.3",
+                "BetterCoop version: 0.5.0",
                 StringComparison.Ordinal)
             || !copied.Contains(
                 "Report format: 2",
@@ -1061,7 +1061,7 @@ public static class Main
                 StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
-                "The native diagnosis button did not copy a CoopGuard report.");
+                "The native diagnosis button did not copy a BetterCoop report.");
         }
 
         string[] forbidden =
@@ -1071,7 +1071,7 @@ public static class Main
             "bearer-secret",
             "json-secret",
             "\\\\server\\share",
-            "CoopGuard-package-v4-aaaaaaaa",
+            "BetterCoop-package-v5-aaaaaaaa",
             new string('b', 64)
         ];
         if (forbidden.Any(value =>
@@ -1127,7 +1127,7 @@ public static class Main
 
         if (!body.Contains(ExpectedMismatchMod, StringComparison.Ordinal)
             || body.Contains(
-                "CoopGuard-component-v4-",
+                "BetterCoop-component-v5-",
                 StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
@@ -1157,7 +1157,7 @@ internal static class DiagnosticsHandlerThrowOnceFault
     private static MethodBase TargetMethod() =>
         AccessTools.Method(
             AccessTools.TypeByName(
-                "CoopGuard.ToolkitDiagnosticsRuntime")
+                "BetterCoop.ToolkitDiagnosticsRuntime")
             ?? throw new MissingMemberException(
                 "ToolkitDiagnosticsRuntime"),
             "HandleMessageCore")
@@ -1218,7 +1218,7 @@ internal static class MultiplayerSaveAfterEmbarkPatch
     typeof(JoinFlow),
     "HandleInitialGameInfoMessage",
     [typeof(InitialGameInfoMessage), typeof(ulong)])]
-[HarmonyBefore("CoopGuard")]
+[HarmonyBefore("BetterCoop")]
 internal static class InitialInfoToctouPatch
 {
     [HarmonyPriority(Priority.First)]

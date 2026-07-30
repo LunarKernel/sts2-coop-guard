@@ -1081,3 +1081,61 @@ All timestamps use Asia/Taipei (UTC+08:00).
   - Steam transport and the eight-hour/2,000-client-minute soak remain
     controlled release gates and were not represented as completed.
 - Nothing was installed into the live game, committed, pushed or uploaded.
+
+### 09:33 - Version 0.4.0 published
+
+- Created the recoverable pre-upload backup
+  `C:\SteamLibrary\steamapps\sts2-coop-guard-workshop.backup.pre-v0.4.0-20260730-092347`.
+- Updated existing Workshop item `3772631781` in place through Mega Crit's
+  official ModUploader and the signed-in Steam client; no duplicate item was
+  created.
+- Uploaded exactly the validated two-file v0.4.0 candidate: 481,792-byte
+  `CoopGuard.dll` and 359-byte `CoopGuard.json` (482,151 bytes total).
+- Steam displayed the updated 482.151 KB size, 30 Jul @ 9:33am timestamp and
+  v0.4.0 description. The owner visibility menu showed `Public` selected.
+- Steam temporarily hid the public item while its automated content-analysis
+  check runs. This is a platform review state, not a private visibility
+  setting.
+- The live game directory remained unchanged.
+
+### 13:10 - BetterCoop v0.5.0 identity migration validated
+
+- Per the requested breaking rename, replaced the current product identity
+  throughout production code and tracked test tooling:
+  - manifest ID/name and release filenames are now `BetterCoop`;
+  - assembly, namespace, public diagnostics API, Harmony owners, report/data
+    names and compatibility-family prefixes now use `BetterCoop`;
+  - the test driver, settings declaration and all reflection fixtures were
+    migrated with the production code.
+- Raised the release to `v0.5.0` and Guard Protocol 5. The existing Workshop
+  item will remain the distribution path, but every peer must update together,
+  fully restart and create a new lobby.
+- Updated the README, current technical/acceptance documents and Workshop
+  metadata to describe the complete Guard, cockpit, coordination, diagnosis,
+  environment, forensics, privacy and migration behavior.
+- Release validation against STS2 `v0.109.1` (`c8c577f6`) passed:
+  - Release build with warnings as errors: zero warnings/errors;
+  - fingerprint, incident, persistence, collaboration and bounded-codec
+    self-check: `BETTERCOOP_FUZZ_ITERATIONS=1000000`;
+  - Harmony owner/isolation smoke: 62 owner-target bindings, optional rollback
+    contained;
+  - isolated ENet 2/3/4-client matrix:
+    `artifacts/f7-matrix/summary-20260730-050103.json`.
+- The first matrix invocation timed out before Mod initialization because its
+  `SeedSettingsPath` incorrectly pointed to the test driver's declaration JSON
+  instead of a game `settings.save`; both logs explicitly showed that the Mod
+  warning had not been accepted. A new isolated seed enabled `BetterCoop` and
+  `BetterCoopTestDriver`; the unchanged production binary then passed 2/3/4
+  peers.
+- Created the exact two-file candidate at
+  `artifacts/staging/v0.5.0-bettercoop-20260730-final`:
+  - `BetterCoop.dll`, 481,792 bytes, SHA-256
+    `f1867f1c186510cac39981fc947981b2cfa22c82eb79143b6f5845aa5da37f90`;
+  - `BetterCoop.json`, 401 bytes, SHA-256
+    `dcec32c27817cad442ecf3fe835f4a5b6618a29c5b02f1efcd1d5623f84dea40`.
+  The candidate contains no old-brand bytes.
+- Prepared the Public Workshop workspace with the same two files and a
+  complete feature description. The recoverable pre-v0.5.0 backup is
+  `C:\SteamLibrary\steamapps\sts2-coop-guard-workshop.backup.pre-v0.5.0-bettercoop-20260730-131000`.
+- Nothing was installed into the live game, uploaded to Workshop, committed or
+  pushed in this step.
