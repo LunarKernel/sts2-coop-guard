@@ -192,6 +192,7 @@ internal static class ModFingerprint
             try
             {
                 int remainingEntries = MaxTotalEntries;
+                List<string> changedPackages = [];
                 bool current = LoadedModsAreCurrent(_baseline.LoadedMods);
                 if (current
                     && !MountedPcksAreCurrent(
@@ -199,15 +200,20 @@ internal static class ModFingerprint
                         ref remainingEntries))
                 {
                     current = false;
+                    changedPackages.Add("mounted PCKs");
                 }
 
                 foreach (PackageCapture package in _baseline.Packages)
                 {
-                    if (!current
-                        || !PackageHasher.IsCurrent(package, ref remainingEntries))
+                    if (!PackageHasher.IsCurrent(
+                            package,
+                            ref remainingEntries))
                     {
                         current = false;
-                        break;
+                        if (changedPackages.Count < 20)
+                        {
+                            changedPackages.Add(SafeLabel(package.ModId));
+                        }
                     }
                 }
 
@@ -215,6 +221,20 @@ internal static class ModFingerprint
                 {
                     return _baseline;
                 }
+
+                string changed = changedPackages.Count == 0
+                    ? string.Empty
+                    : " Changed: "
+                        + string.Join(", ", changedPackages)
+                        + ".";
+                _restartRequired = true;
+                _lastFailure = Failure(
+                    "A Mod package changed after startup. Restart the game before multiplayer."
+                    + changed);
+                Main.Log.Error(
+                    "A captured Mod package changed on disk. Restart is required before multiplayer."
+                    + changed);
+                return _lastFailure;
             }
             catch (Exception ex)
             {
@@ -224,12 +244,6 @@ internal static class ModFingerprint
                 return _lastFailure;
             }
 
-            _restartRequired = true;
-            _lastFailure = Failure(
-                "A Mod package changed after startup. Restart the game before multiplayer.");
-            Main.Log.Error(
-                "A captured Mod package changed on disk. Restart is required before multiplayer.");
-            return _lastFailure;
         }
     }
 
@@ -351,6 +365,9 @@ internal static class ModFingerprint
         }
 
         SkinManagerMounts.VerifySupportedGameBuild();
+        IReadOnlyDictionary<string, SettingsProviderDeclaration>
+            settingsDeclarations =
+                DeterminismRegistry.ReadDeclarations();
 
         foreach (Mod failed in ModManager.Mods.Where(mod =>
                      mod.state == ModLoadState.Failed
@@ -563,6 +580,22 @@ internal static class ModFingerprint
                 errors.Add(
                     $"Final fingerprint consistency check failed ({ex.GetType().Name}).");
             }
+        }
+
+        IReadOnlyList<DeterministicSettingStamp> settings =
+            errors.Count == 0
+                ? DeterminismRegistry.Freeze(settingsDeclarations)
+                : [];
+        foreach (DeterministicSettingStamp setting in settings)
+        {
+            AddCanonicalLine(
+                lines,
+                ref canonicalCharacters,
+                FingerprintCodec.Line(
+                    "deterministic-setting",
+                    setting.ProviderId,
+                    setting.SchemaVersion,
+                    setting.Digest));
         }
 
         string canonicalText = string.Join('\n', lines);

@@ -1,4 +1,12 @@
 artifacts/
+!artifacts/
+artifacts/*
+!artifacts/test-driver/
+artifacts/test-driver/*
+!artifacts/test-driver/Main.cs
+!artifacts/test-driver/CoopGuardTestDriver.csproj
+!artifacts/test-driver/CoopGuardTestDriver.json
+!artifacts/test-driver/coopguard.settings.json
 bin/
 obj/
 .idea/

@@ -3,7 +3,9 @@
 `CoopGuard` makes Slay the Spire 2 reject a multiplayer join when the joining
 peers have different Mod package bytes, even when the Mod IDs and versions
 match. Fresh/loaded lobbies also revalidate every peer immediately before that
-peer starts the run.
+peer starts the run. Its optional multiplayer Toolkit adds health displays,
+fixed coordination messages, local diagnosis and consent-gated forensics
+without changing combat, RNG, run or save state.
 
 Public Workshop item:
 https://steamcommunity.com/sharedfiles/filedetails/?id=3772631781
@@ -45,10 +47,16 @@ https://steamcommunity.com/sharedfiles/filedetails/?id=3772631781
   explicitly tested build even when Skin Manager is not installed. Unknown
   builds fail closed until CoopGuard is updated.
 
-There is no custom network message. Peers receive the aggregate digest and
-per-Mod digest entries through STS2's native Mod-list handshake. Each per-Mod
-entry contains the manifest ID and a package digest—not file contents,
-absolute paths, settings, saves or account data.
+Guard Protocol 4 uses no custom network message. Peers receive the aggregate
+digest and per-Mod digest entries through STS2's native Mod-list handshake.
+Each per-Mod entry contains the manifest ID and a package digest—not file
+contents, absolute paths, settings, saves or account data.
+
+The optional Toolkit diagnostics plane is physically separate from Guard. It
+uses a bounded, versioned message envelope only after per-peer capability
+negotiation. Unsupported, stale or malformed diagnostics degrade or disable
+that optional peer channel; they cannot approve ready/start, alter Guard
+results or replace STS2 networking.
 
 ## Fatal error explanations
 
@@ -82,17 +90,40 @@ warning/error messages. It never copies a package digest, SHA-256, raw path,
 Steam ID, IPv4/IPv6 endpoint or common credential form. Copy success or failure
 is shown through STS2's native fullscreen status text.
 
-## Health status and manual snapshots
+## Multiplayer Toolkit
 
-- When a multiplayer player clicks ready and the full local package check
-  passes, STS2 shows its native non-blocking fullscreen text for 0.5 seconds.
-- Press `Ctrl+F8` at any time to run the bounded metadata freshness check and
-  open a local health/soft-lock snapshot. It checks paths, file lists, sizes
-  and modification times against the full startup fingerprint without
-  rereading every file byte. It does not decide that a pause is a soft lock.
-- Snapshot and fatal-error reports remain local until the player explicitly
-  presses the copy button. CoopGuard adds no telemetry or custom network
-  message and does not automatically repair, reload or mutate a run.
+- A passive HUD shows connection health, the current wait reason and
+  confidence, ready/choice/map progress, public teammate state, recent
+  network samples, loading history, session identity and actionable alerts.
+- `Ctrl+F7` opens the keyboard-focusable cockpit. It includes the lobby health
+  matrix, event timeline, report history/comparison, environment lockfiles,
+  Local Mod Doctor, read-only Harmony report, dependency-aware A/B plans,
+  known-issue rules, accessibility settings and reconnect eligibility.
+- `Ctrl+F8` opens a bounded local health/soft-lock snapshot. It checks current
+  metadata freshness without rereading every file byte and never cancels an
+  action or declares a player responsible.
+- Coordination uses five fixed, localized statuses—never peer-supplied free
+  text. Exact hand sharing and checkpoint forensics are off by default,
+  require unanimous per-session consent and revoke immediately when membership
+  changes. Contribution counters and their separate sharing toggle are
+  optional, factual and explicitly non-scoring.
+- Local forensics records bounded public action/checkpoint metadata, RNG call
+  counts without values or seeds, heartbeat age and the earliest observed
+  divergent category. A push-only API lets another loaded Mod publish bounded
+  diagnostic state/events; publisher identity and rate/size limits are
+  enforced.
+- Environment export, save sidecars, history and settings use schema/size
+  bounds and atomic writes. No feature edits the STS2 save, Mod list, patch
+  order or Workshop state.
+
+The implementation status and deliberate degraded modes for all 52 requested
+features are tracked in
+[docs/MULTIPLAYER_TOOLKIT_IMPLEMENTATION_STATUS.md](docs/MULTIPLAYER_TOOLKIT_IMPLEMENTATION_STATUS.md).
+
+When a multiplayer player clicks ready and the full local package check passes,
+STS2 also shows its native non-blocking confirmation. Snapshot, history and
+fatal-error reports remain local until the player explicitly copies or saves
+them; CoopGuard has no telemetry.
 
 CoopGuard does not modify combat, RNG, run or save state, and it never attempts
 to repair divergence. It is a compatibility guard for trusted co-op peers, not
@@ -117,7 +148,7 @@ dotnet build src/CoopGuard/CoopGuard.csproj `
   -c Release -warnaserror `
   -p:Sts2Path="C:\SteamLibrary\steamapps\common\Slay the Spire 2" `
   -p:CreateModPackage=true `
-  -p:PackageDir="C:\path\to\new\v0.3.3-stage"
+  -p:PackageDir="C:\path\to\new\v0.4.0-stage"
 ```
 
 The staging directory must contain exactly:
@@ -147,6 +178,10 @@ snapshot and rejects Steam IDs, IPv4/IPv6 endpoints, credentials, package
 fingerprints, SHA-256 values, UNC paths and other absolute paths.
 Per-Mod checks cover Unicode IDs, malformed entries, peer-controlled control
 characters, same-ID byte differences and Mods present on only one peer.
+Toolkit checks cover bounded codecs, consent/session rollover, contribution
+monotonicity, lockfiles, sidecars, report comparison, dependency graphs,
+preferences and deterministic parser fuzzing. Set
+`COOPGUARD_FUZZ_ITERATIONS=1000000` for the release-gate fuzz run.
 
 ## Current boundaries
 
@@ -182,15 +217,23 @@ characters, same-ID byte differences and Mods present on only one peer.
   change makes the next connection or rejoin fail closed, but cannot undo state
   already executed in the current run.
 - Identical package bytes can still contain the same deterministic bug.
-- Version `v0.3.3` is built against STS2 `0.109.1`. It has passed the Release
-  build, pure self-check, 21-target Harmony smoke test, isolated native-modal
-  button/clipboard checks for a manual snapshot and an internal
-  `MissingMethodException`, and a matching two-client ENet run in which both
-  peers showed the ready status and embarked. The unchanged
-  remaining gates previously passed full-Mod-set startup, loaded lobbies,
-  running-game rejoin handshake, three-player start, mismatch/TOCTOU rejection
-  and generated-PCK settlement under local ENet. Real Steam transport remains
-  untested. Every game update requires these checks to be repeated.
+- Running-game one-click recovery is `Unsupported` on STS2 `v0.109.1`; only
+  audited pre-run lobby re-entry is offered.
+- F1 monster/public-effect categories are `Unsupported` on this build because
+  STS2 exposes no audited stable public entity/owner identity for them. The
+  remaining checkpoint categories report their availability explicitly.
+- G9 wire expansion remains disabled until the native receiver's allocation
+  bounds are audited. Local category comparison is active and Guard Protocol 4
+  remains the fail-closed compatibility path.
+- Screen-reader narration is not guaranteed by the current Godot UI. Controls
+  remain keyboard focusable, labeled, scalable to 200%, high-contrast capable
+  and backed by copyable text.
+- Version `v0.4.0` targets STS2 `v0.109.1` (`c8c577f6`) and bundled .NET
+  `9.0.7`. Release build/self-check, 62-binding Harmony isolation smoke,
+  isolated Toolkit UI contract, real 2/3/4-client ENet matrix, 3-client
+  collaboration/API test and one-shot diagnostic fault recovery pass locally.
+  Steam transport and the eight-hour release soak remain controlled/manual
+  gates. Every game update requires the complete matrix to be repeated.
 
 Development evidence and command results are kept in
 [docs/WORKLOG.md](docs/WORKLOG.md).

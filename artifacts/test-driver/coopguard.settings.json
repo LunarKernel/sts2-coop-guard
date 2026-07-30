@@ -1,0 +1,9 @@
+{
+  "Schema": 1,
+  "Providers": [
+    {
+      "Id": "CoopGuardTestDriver",
+      "Schema": 1
+    }
+  ]
+}

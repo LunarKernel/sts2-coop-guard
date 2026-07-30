@@ -170,6 +170,12 @@ internal static class FatalIncidentReporter
                     "CoopGuard could not verify the local Mod packages:\n"
                         + string.Join('\n', snapshot.Errors.Take(6)),
                     IsChinese());
+            incident = incident with
+            {
+                Body = incident.Body
+                    + "\n\n"
+                    + ToolkitRuntime.BuildOverview(IsChinese())
+            };
             NErrorPopup? popup = CreateDiagnosticPopup(incident, snapshot);
             NModalContainer? container = NModalContainer.Instance;
             if (popup != null
@@ -251,16 +257,19 @@ internal static class FatalIncidentReporter
             showReportBugButton: true);
         if (popup != null)
         {
+            string report = IncidentExplainer.BuildReport(
+                incident,
+                GameVersion(),
+                RuntimeState(),
+                health,
+                SnapshotLogs(),
+                DateTimeOffset.UtcNow,
+                ToolkitRuntime.BuildReportDetails());
+            ToolkitReportHistory.Remember(report);
             PopupReports.Add(
                 popup,
                 new PopupReport(
-                    IncidentExplainer.BuildReport(
-                        incident,
-                        GameVersion(),
-                        RuntimeState(),
-                        health,
-                        SnapshotLogs(),
-                        DateTimeOffset.UtcNow),
+                    report,
                     chinese));
         }
 

@@ -671,6 +671,152 @@ All timestamps use Asia/Taipei (UTC+08:00).
   check runs. This is a platform review state, not a private visibility
   setting.
 
+### 23:29 - Toolkit P0/P1 implementation and isolated runtime evidence
+
+- Split Guard, diagnostics, runtime HUD, lobby and join observations into six
+  explicit Harmony owners. Optional-owner rollback cannot remove Guard
+  patches; assembly-wide `PatchAll` is no longer used by the production Mod.
+- Added bounded local primitives: 1,024-entry/15-minute flight recorder,
+  60-sample network histories, monotonic freshness, progress leases, stable
+  session-only P#/shape/color identities, 50-entry alert center and
+  first-failure optional-module fuse.
+- Added the local multiplayer cockpit using only native STS2 observations:
+  connection state, RTT/loss/heartbeat/loading, join stage, conservative wait
+  reason/confidence, 30/60/90-second stall suspicion, timeline, 60-second
+  network summary, alerts and pre-run native lobby re-entry.
+- Re-entry is manual, memory-only, one attempt, ten-minute TTL and repeats the
+  full Guard verification before calling STS2's native Steam lobby flow.
+  Running-run rejoin remains explicitly Unsupported on game build `0.109.1`.
+- Added a responsive top-right scroll container, keyboard-focusable controls,
+  non-color P#/shape labels plus a fixed color token, alert acknowledgement,
+  manual report saving and bilingual labels. The panel does not take focus
+  when an alert arrives.
+- Added opt-in-only persistence foundations. Reports stay in memory until the
+  user presses Save, are redacted again before atomic write, and are bounded to
+  20 files, 1 MiB each, 25 MiB total and 30 days. A bounded own-marker/log-tail
+  crash review distinguishes native signatures from insufficient evidence.
+- Corrected the alert-capacity edge case: when all 50 retained alerts are
+  fatal, a new current fatal replaces the oldest fatal instead of being
+  dropped.
+- Validation against STS2 `0.109.1`:
+  - fingerprint/persistence/alert self-check passed;
+  - Release build with warnings as errors passed with zero warnings/errors;
+  - Harmony owner/isolation smoke passed all 39 owner-target bindings and
+    contained optional rollback;
+  - isolated Godot component startup logged
+    `TOOLKIT_COCKPIT_OK hudBytes=44 overviewBytes=386` and exited 0;
+  - isolated ENet host/client profiles both loaded the same 225,034-byte Mod
+    set, reported identical digest
+    `c229363f66e8a5bfdf1f94e6259f8fad65c093ebc4dd333535f4e5f14e009468`,
+    auto-readied at two players, embarked, and the host requested the native
+    multiplayer save;
+  - neither side logged `StateDivergence`, `4001 / Timeout`, fingerprint
+    failure, initializer exception or Toolkit disablement.
+- Runtime evidence is under
+  `artifacts/runtime-toolkit-p1-20260729/_profiles`. The live game and
+  Workshop were not modified.
+- Added C7 native FMOD cues for all-ready, disconnect, rejoin and manual
+  reconnect result. The local sound toggle is keyboard-focusable, every cue
+  has an existing visual/timeline equivalent, identical cues are limited to
+  one per two seconds, and all Toolkit cues are limited to three per ten
+  seconds. No audio asset, microphone access or new dependency was added.
+- Extended D5's bounded backend with newest-first listing, redacted bounded
+  reads, exact generated-name validation, single-item deletion and clear-all.
+  Self-checks reject path traversal and verify delete/clear without touching
+  non-CoopGuard files. The richer selectable history UI remains part of the
+  unfinished P1 cockpit work.
+
+### 22:42 - Multiplayer Toolkit P0 foundation implemented
+
+- Replaced the assembly-wide `PatchAll` initialization with explicit install
+  transactions and independent owners:
+  - `CoopGuard.guard.sentinel` remains installed first;
+  - `CoopGuard.guard` contains only required compatibility gates;
+  - `CoopGuard.diagnostics` and `CoopGuard.toolkit` fail open and roll back
+    only their own patches.
+- Added the dependency-free P0 primitives used by later Toolkit stages:
+  immutable monotonic observations, a single 1,024-entry/512-byte bounded
+  flight-recorder ring, per-session identity/membership epoch and a
+  first-failure optional-module fuse.
+- Added a main-thread `ToolkitNode` through an isolated `NGame._Ready` patch.
+  It observes only native connection/loading state at 1 Hz, clears session
+  state on disconnect/detach and contains every Godot callback exception.
+- Extended the existing `Ctrl+F8` health popup with the first local cockpit
+  overview. No custom network message, persistent file, game-state mutation or
+  live-game installation was added.
+- Extended the pure self-check with monotonic freshness boundaries, bounded
+  UTF-8/control-character handling, recorder wrap/order, fuse behavior and
+  session rollover.
+- Added a tracked Harmony smoke project. Under the copied STS2 .NET `9.0.7`
+  runtime it verified all 22 targets under their exact four owners and injected
+  a missing optional target; only the failed owner rolled back.
+- Validation:
+  - `FingerprintSelfCheck` passed;
+  - CoopGuard Release build with warnings as errors passed with zero warnings
+    and errors;
+  - Harmony owner/isolation smoke passed;
+  - no build was installed into the live game.
+
+### 2026-07-29 - Multiplayer toolkit design and acceptance specification
+
+- Accepted the complete H1-H12, C1-C10, G1-G12, D1-D10 and F1-F8 feature
+  catalog as the long-term product scope; this action produced specifications
+  only and did not change, build, install or publish the Mod.
+- Added `MULTIPLAYER_TOOLKIT_TECHNICAL_DESIGN.md` with 12 mandatory safety
+  invariants, native-API reuse, privacy tiers, UI/accessibility rules, resource
+  budgets, five implementation phases and release gates.
+- Preserved the existing Guard as the only authoritative fail-closed layer.
+  HUD, coordination, diagnostics and forensics are independently fail-open and
+  cannot participate in ready/start decisions.
+- Proposed ADR 0003 for a bounded optional diagnostics plane. It cannot be
+  accepted until pre-allocation payload limits, sender membership validation,
+  parser fuzzing and 2/3/4-client lifecycle tests are proven. Protocol failure
+  disables only optional peer displays.
+- Kept G9/G10 compatibility truth on the existing native Mod-list path rather
+  than the optional diagnostics plane. A future wire change must bump the Guard
+  protocol and pass the native ten-second handshake size matrix.
+- Defined C9 as default-off and unanimous per-session consent, C6 as exactly
+  user-initiated native rejoin, F1/F2 as allowlisted hierarchical digests at
+  natural checkpoints, F4 as count-only observation with no RNG/checksum call,
+  and F6 as push-only with no stored callback. Declared deterministic-setting
+  digests freeze with the Guard entry; a different late publish becomes sticky
+  restart-required rather than silently changing the handshake value.
+- Added split per-feature acceptance criteria and a 52-row master traceability
+  matrix. Every H/C/G/D feature has a normal and abnormal `AT-*` case; every F
+  feature has normal, abnormal and degraded `CG-TST-*` cases.
+- Added the layered test plan covering unit/component/contract, isolated
+  2/3/4-client, E2E, soak, upgrade, security/privacy, performance and
+  accessibility validation plus a developer-only fault catalog.
+- Engineering references were limited to official Google SRE/engineering
+  practices, Google test-size guidance and Apple HIG feedback, alerts,
+  accessibility and privacy guidance.
+- Independent API/reliability/security reviews found that STS2 v0.109.1 has no
+  production consumer for running-run rejoin: production returns
+  `RunInProgress` and the debug path marks it unimplemented. C6 is therefore
+  limited to audited pre-run lobby re-entry; running recovery remains in scope
+  but is explicitly Unsupported until a future build passes a real recovery
+  contract and two-client test.
+- Review hardening split F6's Guard settings endpoint from its optional
+  diagnostics endpoint, required independent Harmony owners/install
+  transactions, added native and custom deserializer pre-allocation gates,
+  one shared peer scheduler, C9 membership-epoch commit barriers, a concrete
+  public-only `F1SchemaV1`, exact save-byte sidecar binding and opt-in persistent
+  report history.
+- Added stable cross-feature protocol/isolation tests and positive F1/F2/F4
+  multiplayer tests. Mixed CoopGuard releases are no longer described as
+  coexisting: strict package equality rejects them before lobby, while
+  Diagnostics negotiation covers same-package local availability only.
+- Final static specification validation passed:
+  - technical catalog contains exactly 52 unique features with none missing;
+  - H/C contains 22 sections and 45 unique AT cases; G/D contains 22 sections
+    and 44 unique AT cases;
+  - the test plan contains 46 unique engineering tests; all 32 F/CORE
+    requirements map to at least one test and every test appears in the master
+    traceability matrix;
+  - Markdown table shapes, trailing whitespace and `git diff --check` passed.
+- No source, project, manifest, package or live-game file changed, so no build
+  or client runtime was performed for this documentation-only action.
+
 ### 11:03 - Version 0.3.3 identifies the differing Mod
 
 - Fixed the root cause of generic Mod-mismatch reports: protocol 3 exchanged
@@ -738,3 +884,200 @@ All timestamps use Asia/Taipei (UTC+08:00).
 - Steam temporarily hid the public item while its automated content-analysis
   check runs. This is a platform review state, not a private visibility
   setting.
+
+### 2026-07-30 00:47 - Toolkit P1 lifecycle fix and first P2 governance slice
+
+- Fixed the cockpit lifecycle at its shared root. A dynamically added C# Godot
+  node did not reliably receive `_Ready`/`_Process`; attachment now performs an
+  idempotent explicit initialization and a persistent native
+  `NControllerManager._Process` patch drives the bounded refresh. The optional
+  runtime remains under its own fail-open Harmony owner.
+- Added the `Ctrl+F7` control panel, keyboard-focusable scrolling controls,
+  selectable manual report history, native sound cues with rate limits, and
+  explicit environment save/copy/compare actions. Report history remains
+  opt-in and bounded; no report is written automatically.
+- Added the first environment-governance implementation:
+  - G1/G2 mismatch output now preserves the concise summary and adds a
+    per-Mod direction/confidence/read-only repair table plus host/local/common
+    repair groups, with 100 displayed and 256 parsed item bounds;
+  - G3 exposes a read-only Local Mod Doctor using native `ModManager`
+    states/errors, duplicate IDs, source overlap and existing package
+    freshness. It does not claim undeclared dependency safety;
+  - G4 reuses `ModFingerprint.ValidateQuick` at a five-second interval and
+    preserves sticky restart-required behavior. Changed package IDs are
+    included when the existing bounded metadata scan can attribute them;
+  - G5/G9 export a deterministic schema-1 environment lockfile with strict
+    package, category and size bounds and a hostile-input parser. Export is
+    explicit, at most 512 KiB, contains no file content or absolute path, and
+    can compare an imported lockfile by difference category;
+  - G8 exposes read-only Harmony owner/type/priority/before/after metadata,
+    caps processing at 5,000 patch records, and never unpatches or reorders;
+  - G10 adds a push-only 32-byte settings-digest API. Publisher identity is
+    authenticated after native Mod association and before fingerprint freeze;
+    traversal, conflicting publishers and late changes are rejected. Digests
+    enter the strict aggregate Guard fingerprint and lockfile settings
+    category; actual setting values never enter CoopGuard;
+  - G12 adds a schema-checked, local-only exact-match rule catalog for the
+    current build. It has no network updater, executable content or ability to
+    override native/Guard blocking.
+- Hardened lockfile parsing against null collections/strings, unknown
+  categories, duplicate Mod/provider IDs, truncated JSON, unsupported schema,
+  oversized input and failed-capture snapshots. The headless clipboard test
+  was corrected to test malicious data directly against the parser because the
+  Godot headless clipboard does not reliably accept a second write.
+- Validation against STS2 `v0.109.1`:
+  - Release build with warnings as errors passed with zero warnings/errors;
+  - fingerprint/incident self-check passed, including the G1 table and grouped
+    repair text without digest leakage;
+  - game-bundled .NET `9.0.7` Harmony smoke passed all 39 owner-target
+    bindings and contained an injected optional-owner rollback;
+  - isolated headless runtime contract passed
+    `TOOLKIT_COCKPIT_OK hudBytes=142 overviewBytes=701
+    environmentBytes=1314`, including focusable controls, deterministic
+    export/re-import, traversal/oversize/truncation/unknown-category rejection,
+    G10 fixture publication, read-only Doctor/Harmony reports and exact versus
+    near-miss G12 matching.
+- This is a partial P2 milestone, not completion of the 52-feature product.
+  G3 manifest dependency-graph fixtures, G6/G7 save sidecars, full G9 wire
+  allocation audit, G10 declaration-file enforcement, D6/D9, dual-client
+  regression and later phases remain open. Nothing was installed into the
+  live game, committed, pushed or uploaded.
+
+### 2026-07-30 01:20 - Toolkit P1 preferences and accessibility contract
+
+- Added one schema-checked, fail-safe local preference file for Toolkit-only
+  presentation settings. It is capped at 4 KiB, parsed with a depth bound,
+  rejects invalid/non-finite values, falls back to safe defaults, and is
+  written only after an explicit user action through temp-file flush plus
+  atomic replacement.
+- Added immediately applied controls for master sound, native FMOD volume,
+  ready/network/rejoin/result cue categories, 100-200% text/UI scale, reduced
+  motion and high contrast. Every sound event retains its existing visual and
+  timeline equivalent; no audio asset or dependency was added.
+- Added a waiting-for-local-player cue and routed every cue through the
+  existing global/per-kind rate limiter. Category preferences cannot affect
+  the Guard, lobby readiness, run state, saves, RNG or networking.
+- Completed the `Ctrl+F7` focus lifecycle: opening the control panel moves
+  keyboard focus to its first control, closing collapses all settings and
+  governance controls, and valid prior game focus is restored. Passive HUD and
+  alerts never steal focus.
+- Reused an inherited native Godot `Theme` for scaling and contrast. A
+  dual-client regression exposed invalid `Theme.Clear*` calls on an initially
+  empty theme; the shared transition logic now clears contrast keys only when
+  moving from enabled to disabled.
+- Validation against STS2 `v0.109.1`:
+  - preference round-trip, corrupt/oversized fallback and temp-file cleanup
+    checks passed in the dependency-free self-check;
+  - Release build with warnings as errors passed with zero warnings/errors;
+  - Harmony owner/isolation smoke passed all 39 owner-target bindings and
+    contained optional rollback;
+  - an isolated real Godot run passed
+    `TOOLKIT_COCKPIT_OK hudBytes=142 overviewBytes=701
+    environmentBytes=1314`, including immediate 200% inherited font size,
+    bounded atomic preferences, settings controls and focus restoration;
+  - the final isolated ENet host/client run produced the same digest
+    `5c6a498c0e20f1082939b2f141d207b32689a0bfb55919cad1e8895dd8362e73`
+    on both sides, both passed full verification and auto-ready, both
+    embarked, and the host requested the native multiplayer save;
+  - neither side logged `StateDivergence`, `4001 / Timeout`, Toolkit
+    disablement, initializer/unhandled exceptions or the fixed theme error.
+- P1 still lacks the release-gate eight-hour soak and captured 1280x720 visual
+  QA, so it is not marked complete. Nothing was installed into the live game,
+  committed, pushed or uploaded.
+
+### 2026-07-30 05:25 - Version 0.4.0 multiplayer Toolkit implementation complete
+
+- Implemented the requested H1-H12, C1-C10, G1-G12, D1-D10 and F1-F8
+  production paths. Added a 52-row traceability record in
+  `docs/MULTIPLAYER_TOOLKIT_IMPLEMENTATION_STATUS.md`; unsupported or
+  qualification-pending portions are explicit instead of inferred.
+- Added the optional diagnostics protocol as a bounded plane independent from
+  Guard Protocol 4:
+  - fixed major/minor envelope, 16-peer and payload limits, monotonic sequence
+    validation, targeted Hello/ACK with bounded retry and all-peer capability
+    gates;
+  - optional failures, malformed packets and unsupported features fail open
+    without changing native networking, ready/start or the Guard result;
+  - consent, quick-status, hand, checkpoint, checkpoint-result and
+    contribution control traffic uses small per-peer bounded pending queues,
+    cleared synchronously on revoke, member change or peer disablement.
+- Completed collaboration and display features:
+  - C1 five-value localized quick statuses have no free text, use a
+    session-wide capability gate and reliable bounded host fan-out;
+  - C9 exact hand sharing is default-off, unanimous, revision-bounded,
+    host-relayed, safe for unknown card IDs and revoked by roster changes;
+  - C10 records only attributable public action/damage/block/healing facts,
+    keeps local display separate from sharing, sends changed-only five-second
+    snapshots, rejects non-monotonic updates and labels results as
+    entertainment-only rather than a score;
+  - H9 caches only successful environment codes, H10 retains five local load
+    durations, and D2 lowers confidence when native connection evidence
+    conflicts with a phase/action-based wait inference.
+- Completed forensics and author APIs:
+  - F1 uses audited native checkpoint constructors and separately installed
+    RNG observers. A failed optional owner is rolled back as one unit and the
+    category becomes `Unsupported`, never a fabricated zero;
+  - F2 retains the last common and earliest observed divergent checkpoint,
+    subject ordinal, comparable category mask and actual first-divergence
+    mask, then shares the bounded result with all capable peers;
+  - F6 authenticates the loaded publishing Mod, accepts only push-only bounded
+    state/event records and enforces per-publisher rate limits. Its optional
+    path is physically separate from the fail-closed G10 settings digest;
+  - F8 exists only in the tracked Debug test driver, requires a marked
+    isolated APPDATA root and has no trigger string in the production DLL.
+- Split optional Harmony owners for checkpoint, RNG and contribution
+  observers. A missing target now rolls back only its complete feature owner;
+  Guard and unrelated Toolkit modules remain installed.
+- Real-client regression findings and root fixes:
+  - one protocol check sampled during the native lobby-to-run service rollover;
+    the test now waits for the same negotiated session twice and uses the
+    public all-peer capability gate;
+  - C1 could partially broadcast when a periodic state message had consumed a
+    peer token. A maximum-three latest-status queue now guarantees eventual
+    delivery without unbounded memory;
+  - a client incorrectly rejected an authenticated host status until its own
+    aggregate matrix arrived. The host now owns the all-peer gate while clients
+    validate the negotiated host and fixed message type;
+  - the collaboration test previously let the host enter consent before a
+    slower peer reached its capability barrier. Its bounded wait now covers
+    the worst protocol window;
+  - Godot headless has no system clipboard. The UI test now invokes the same
+    lockfile parser and dependency-aware planner core directly while still
+    checking that every clipboard-facing control exists and is focusable.
+- Final validation against STS2 `v0.109.1` (`c8c577f6`) and bundled .NET
+  `9.0.7`:
+  - Release build with warnings as errors passed with zero warnings/errors;
+  - fingerprint/incident self-check and all bounded codecs passed with
+    `COOPGUARD_FUZZ_ITERATIONS=1000000`;
+  - Harmony owner/isolation smoke passed 62 owner-target bindings and contained
+    an injected partial optional-owner rollback;
+  - 3-peer collaboration/API run passed at
+    `artifacts/f7-matrix/summary-20260729-210421.json`;
+  - final isolated ENet 2/3/4 matrix passed at
+    `artifacts/f7-matrix/summary-20260729-210502.json`;
+  - the final versioned v0.4.0 DLL passed an additional 2-peer handshake at
+    `artifacts/f7-matrix/summary-20260729-212434.json`;
+  - one-shot diagnostics-handler failure recovered in the 2-peer run at
+    `artifacts/f7-matrix/summary-20260729-210604.json`;
+  - isolated Godot UI/governance contract passed
+    `TOOLKIT_COCKPIT_OK hudBytes=105 overviewBytes=967
+    environmentBytes=1314`;
+  - byte inspection found none of `cgtest-fault`, `F8_FAULT`,
+    `diagnostics-handler-throw-once` or
+    `DiagnosticsHandlerThrowOnceFault` in the production `CoopGuard.dll`;
+    the Release test driver retained only its refusal branch and contained no
+    armed ID, injected marker or fault class.
+- Created the exact two-file candidate at
+  `artifacts/staging/v0.4.0-20260730-final2`:
+  - `CoopGuard.dll`, 481,792 bytes, SHA-256
+    `d4c70d458bb14d0edea919f0a9cf7a7f45b01371b743d578f9fa74d31af93a11`;
+  - `CoopGuard.json`, 359 bytes, SHA-256
+    `f41c4436d54ce14ece4e4b38f1b061ca47295843cfa303373317542ab497fe5c`.
+- Deliberate release boundaries remain:
+  - running-game one-click recovery is `Unsupported` on this game build;
+  - F1 monster/public-effect categories lack audited stable public identities;
+  - G9 local category comparison is active, but wire expansion is withheld
+    pending native receiver allocation audit;
+  - Steam transport and the eight-hour/2,000-client-minute soak remain
+    controlled release gates and were not represented as completed.
+- Nothing was installed into the live game, committed, pushed or uploaded.

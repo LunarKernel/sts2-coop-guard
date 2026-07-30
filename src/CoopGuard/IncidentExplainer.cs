@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace CoopGuard;
@@ -347,7 +348,8 @@ internal static class IncidentExplainer
         string runtimeState,
         string packageHealth,
         IReadOnlyList<string> recentLogs,
-        DateTimeOffset capturedAt)
+        DateTimeOffset capturedAt,
+        IReadOnlyList<string>? toolkitDetails = null)
     {
         Version? assemblyVersion =
             typeof(IncidentExplainer).Assembly.GetName().Version;
@@ -360,21 +362,72 @@ internal static class IncidentExplainer
             .Reverse()
             .Select(Redact)
             .ToArray();
-        return string.Join(
-            '\n',
+        string[] details = toolkitDetails?.Select(Redact).ToArray()
+            ??
+            [
+                "Session ID: unavailable",
+                "Role: Unknown",
+                "Network: unavailable",
+                "Timeline: unavailable"
+            ];
+        List<string> lines =
+        [
             "CoopGuard diagnostic report",
             $"CoopGuard version: {coopGuardVersion}",
-            "Report format: 1",
+            $"Report format: {ToolkitReportComparison.SupportedFormat}",
             $"Captured UTC: {capturedAt.UtcDateTime:O}",
-            $"Game version: {Redact(gameVersion)}",
+            $"Game version: {Redact(gameVersion)}"
+        ];
+        lines.AddRange(details);
+        lines.AddRange(
+        [
             $"Runtime state: {Redact(runtimeState)}",
             $"Package health: {Redact(packageHealth)}",
+            $"Environment: {Redact(packageHealth)}",
+            $"Error code: {Redact(incident.Code)}",
             string.Empty,
             $"[{incident.Code}] {Redact(incident.Title)}",
             Redact(incident.Body),
             string.Empty,
             "Recent warnings/errors (redacted):",
-            evidence.Length == 0 ? "<none>" : string.Join('\n', evidence));
+            evidence.Length == 0 ? "<none>" : string.Join('\n', evidence)
+        ]);
+        return RedactReport(
+            string.Join('\n', lines),
+            ToolkitReportHistory.MaxReportBytes);
+    }
+
+    public static string RedactReport(
+        string? input,
+        int maxUtf8Bytes = ToolkitReportHistory.MaxReportBytes)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return "<none>";
+        }
+
+        string normalized = input
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n');
+        StringBuilder result = new(Math.Min(normalized.Length, maxUtf8Bytes));
+        int used = 0;
+        foreach (string line in normalized.Split('\n').Take(4096))
+        {
+            string safe = line.Length == 0 ? string.Empty : Redact(line);
+            string value = result.Length == 0 ? safe : "\n" + safe;
+            foreach (Rune rune in value.EnumerateRunes())
+            {
+                if (rune.Utf8SequenceLength > maxUtf8Bytes - used)
+                {
+                    return result.ToString();
+                }
+
+                result.Append(rune);
+                used += rune.Utf8SequenceLength;
+            }
+        }
+
+        return result.ToString();
     }
 
     public static string Redact(string? input)
@@ -519,18 +572,29 @@ internal static class IncidentExplainer
 
         bool packageBytesDiffer =
             fingerprintMissingOnHost && fingerprintMissingOnLocal;
-        string[] differingComponents = componentsMissingOnHost
+        string[] allDifferingComponents = componentsMissingOnHost
             .Intersect(componentsMissingOnLocal, StringComparer.Ordinal)
-            .Take(5)
             .ToArray();
-        string[] localOnlyComponents = componentsMissingOnHost
+        string[] allLocalOnlyComponents = componentsMissingOnHost
             .Except(componentsMissingOnLocal, StringComparer.Ordinal)
-            .Take(5)
             .ToArray();
-        string[] hostOnlyComponents = componentsMissingOnLocal
+        string[] allHostOnlyComponents = componentsMissingOnLocal
             .Except(componentsMissingOnHost, StringComparer.Ordinal)
-            .Take(5)
             .ToArray();
+        string[] differingComponents = allDifferingComponents
+            .Take(100)
+            .ToArray();
+        string[] localOnlyComponents = allLocalOnlyComponents
+            .Take(Math.Max(0, 100 - differingComponents.Length))
+            .ToArray();
+        string[] hostOnlyComponents = allHostOnlyComponents
+            .Take(Math.Max(
+                0,
+                100 - differingComponents.Length - localOnlyComponents.Length))
+            .ToArray();
+        int totalComponentDifferences = allDifferingComponents.Length
+            + allLocalOnlyComponents.Length
+            + allHostOnlyComponents.Length;
         bool locatedComponents = differingComponents.Length > 0
             || localOnlyComponents.Length > 0
             || hostOnlyComponents.Length > 0;
@@ -556,6 +620,40 @@ internal static class IncidentExplainer
             {
                 zh.Add("仅主机存在：" + string.Join(", ", hostOnlyComponents));
                 en.Add("Present only on host: " + string.Join(", ", hostOnlyComponents));
+            }
+
+            zh.Add("Mod | 差异方向 | 置信度 | 只读处理建议");
+            en.Add("Mod | Difference | Confidence | Read-only repair");
+            foreach (string mod in differingComponents)
+            {
+                zh.Add(
+                    $"{mod} | 双方内容或版本不同 | 已确认 | 双方从同一来源重装或更新");
+                en.Add(
+                    $"{mod} | Different content or version | Confirmed | Reinstall or update from the same source on both peers");
+            }
+
+            foreach (string mod in localOnlyComponents)
+            {
+                zh.Add(
+                    $"{mod} | 仅本机存在 | 已确认 | 主机安装同版，或本机停用");
+                en.Add(
+                    $"{mod} | Present only locally | Confirmed | Install the same build on the host, or disable it locally");
+            }
+
+            foreach (string mod in hostOnlyComponents)
+            {
+                zh.Add(
+                    $"{mod} | 仅主机存在 | 已确认 | 本机安装同版，或主机停用");
+                en.Add(
+                    $"{mod} | Present only on host | Confirmed | Install the same build locally, or disable it on the host");
+            }
+
+            if (totalComponentDifferences > 100)
+            {
+                zh.Add(
+                    $"另有 {totalComponentDifferences - 100} 项未在弹窗列出；阻断结论不变。");
+                en.Add(
+                    $"+{totalComponentDifferences - 100} more differences are not listed in the popup; the blocking result is unchanged.");
             }
 
             evidenceZh = string.Join('\n', zh);
@@ -598,6 +696,38 @@ internal static class IncidentExplainer
             : packageBytesDiffer
             ? "The aggregate Mod composition differs, but the per-Mod fingerprints do not identify one package, so no single Mod can be named reliably."
             : "The peers have different enabled Mod sets or declared versions.";
+        List<string> actionsZh = ["双方：完全退出游戏；处理后重启并新建房间。"];
+        List<string> actionsEn =
+            ["Both peers: fully exit the game, then restart and create a new lobby after repairs."];
+        if (localOnlyComponents.Length > 0)
+        {
+            actionsZh.Insert(
+                0,
+                "本机：停用仅本机存在的 Mod，或让主机安装完全相同版本。");
+            actionsEn.Insert(
+                0,
+                "Local: disable locally-only Mods, or have the host install the exact same builds.");
+        }
+
+        if (hostOnlyComponents.Length > 0)
+        {
+            actionsZh.Insert(
+                0,
+                "主机：停用仅主机存在的 Mod，或让本机安装完全相同版本。");
+            actionsEn.Insert(
+                0,
+                "Host: disable host-only Mods, or have the local client install the exact same builds.");
+        }
+
+        if (differingComponents.Length > 0)
+        {
+            actionsZh.Insert(
+                0,
+                "双方：从同一来源重装或更新“内容或版本不同”的 Mod，并清除旧版残留。");
+            actionsEn.Insert(
+                0,
+                "Both peers: reinstall or update the different-content Mods from the same source and remove old leftovers.");
+        }
 
         return Build(
             "CG-MOD-MISMATCH",
@@ -608,8 +738,8 @@ internal static class IncidentExplainer
             causeEn,
             evidenceZh,
             evidenceEn,
-            "双方退出游戏，重新安装或更新差异 Mod，清除旧版本残留，并在重新启动后新开一局。",
-            "Both peers should exit, reinstall or update the differing Mods, remove old leftovers, restart, and begin a new run.",
+            string.Join('\n', actionsZh),
+            string.Join('\n', actionsEn),
             "已确认",
             "Confirmed",
             false);
@@ -926,6 +1056,7 @@ internal static class IncidentExplainer
                     : string.Empty)
             .Where(value => value.Length > 0)
             .Distinct(StringComparer.Ordinal)
+            .Take(256)
             .ToArray();
 
     private static string[] SafeModNames(IEnumerable<string> values) =>

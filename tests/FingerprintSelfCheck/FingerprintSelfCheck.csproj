@@ -10,5 +10,13 @@
     <Compile Include="../../src/CoopGuard/FingerprintCodec.cs" Link="FingerprintCodec.cs" />
     <Compile Include="../../src/CoopGuard/IncidentExplainer.cs" Link="IncidentExplainer.cs" />
     <Compile Include="../../src/CoopGuard/PackageHasher.cs" Link="PackageHasher.cs" />
+    <Compile Include="../../src/CoopGuard/ToolkitCore.cs" Link="ToolkitCore.cs" />
+    <Compile Include="../../src/CoopGuard/ToolkitCollaborationCore.cs" Link="ToolkitCollaborationCore.cs" />
+    <Compile Include="../../src/CoopGuard/ToolkitDoctorCore.cs" Link="ToolkitDoctorCore.cs" />
+    <Compile Include="../../src/CoopGuard/ToolkitPersistence.cs" Link="ToolkitPersistence.cs" />
+    <Compile Include="../../src/CoopGuard/ToolkitProtocolCore.cs" Link="ToolkitProtocolCore.cs" />
+    <Compile Include="../../src/CoopGuard/ToolkitForensicsCore.cs" Link="ToolkitForensicsCore.cs" />
+    <Compile Include="../../src/CoopGuard/ToolkitReportComparison.cs" Link="ToolkitReportComparison.cs" />
+    <Compile Include="../../src/CoopGuard/ToolkitSettingsCore.cs" Link="ToolkitSettingsCore.cs" />
   </ItemGroup>
 </Project>
