@@ -1139,3 +1139,22 @@ All timestamps use Asia/Taipei (UTC+08:00).
   `C:\SteamLibrary\steamapps\sts2-coop-guard-workshop.backup.pre-v0.5.0-bettercoop-20260730-131000`.
 - Nothing was installed into the live game, uploaded to Workshop, committed or
   pushed in this step.
+
+### 13:12 - BetterCoop v0.5.0 published
+
+- Committed the complete identity migration as `2978283`
+  (`Rename to BetterCoop v0.5.0`) and pushed the existing
+  `agent/coopguard-v0.2.1` branch. Draft PR #1 remains the review target.
+- Updated existing Workshop item `3772631781` in place through Mega Crit's
+  official ModUploader and the signed-in Steam client; no duplicate item was
+  created and existing subscriptions remain on the same item.
+- Uploaded exactly the validated two-file candidate: 481,792-byte
+  `BetterCoop.dll` and 401-byte `BetterCoop.json` (482,193 bytes total).
+- Steam rendered the new `BetterCoop - Multiplayer Toolkit & Guard` title,
+  full categorized feature description, 482.193 KB size, 30 Jul @ 1:12pm
+  timestamp and eighth change note. The owner visibility menu showed `Public`
+  selected.
+- Steam temporarily hid the public item while its automated content-analysis
+  check runs. This is a platform review state, not a private visibility
+  setting.
+- The live game directory remained unchanged.
