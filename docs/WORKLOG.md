@@ -1261,3 +1261,29 @@ All timestamps use Asia/Taipei (UTC+08:00).
     SHA-256 `C334040720EF0E26B37A6DE6555BC3FB7D4D3893953EE69A8E93507E9862C601`.
 - Binary scans found neither test fault IDs (`CG-FLT-`) nor the old
   `CoopGuard` brand. The live game, GitHub and Workshop remain unchanged.
+
+### 12:00 - BetterCoop v0.6.0 published
+
+- Committed v0.6.0 as `b5b2978` and pushed the existing
+  `agent/coopguard-v0.2.1` branch; Draft PR #1 remains the review target.
+- Created and verified the recoverable pre-upload backup
+  `C:\SteamLibrary\steamapps\sts2-coop-guard-workshop.backup.pre-v0.6.0-20260731-1156`.
+- Updated existing Workshop item `3772631781` in place through Mega Crit's
+  official ModUploader and the signed-in Steam client; no duplicate item was
+  created and dependencies were unchanged.
+- Uploaded exactly the validated two-file RC: 635,904-byte
+  `BetterCoop.dll` and 431-byte `BetterCoop.json` (636,335 bytes total).
+  Their SHA-256 values remain
+  `8080A4FF5CA739AB673FD97A629C5E3C35F9C5C17953052BC2989B18F296D5D2`
+  and
+  `C334040720EF0E26B37A6DE6555BC3FB7D4D3893953EE69A8E93507E9862C601`.
+- Replaced the Workshop text with a 5,726-byte bilingual v0.6.0 description,
+  English first, covering bounded peer text, easier teammate-hand viewing,
+  experimental default-off rollback, Limit Break validation, seed/RNG
+  analysis and the remaining release gates.
+- Steam rendered the v0.6.0 heading and features, 636.335 KB size,
+  `31 Jul @ 11:59am` timestamp and ninth change note. The owner visibility
+  menu showed `Public` selected.
+- Steam temporarily hid the item for automated content analysis. This is a
+  platform review state, not a private visibility setting.
+- The live game installation remained unchanged.
