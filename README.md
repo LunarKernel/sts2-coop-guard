@@ -4,13 +4,16 @@
 compatibility guard rejects joins when peers have different effective Mod
 package bytes, even when Mod IDs and versions match. Its optional tools add a
 co-op cockpit, health and progress displays, fixed coordination messages,
-actionable local diagnosis, environment management and consent-gated
-forensics without changing combat, RNG, run or save state.
+actionable local diagnosis, bounded peer text, one-click teammate hand
+watching, environment management, seed/RNG analysis and consent-gated
+forensics. An experimental, default-off host rollback tool can restore a
+verified native multiplayer room checkpoint through STS2's own loaded-run
+lobby flow.
 
 Public Workshop item:
 https://steamcommunity.com/sharedfiles/filedetails/?id=3772631781
 
-## How protocol 5 works
+## How protocol 6 works
 
 - After STS2 finishes loading Mods, BetterCoop recursively hashes regular files
   below every loaded Mod root—including Mods marked
@@ -47,7 +50,7 @@ https://steamcommunity.com/sharedfiles/filedetails/?id=3772631781
   explicitly tested build even when Skin Manager is not installed. Unknown
   builds fail closed until BetterCoop is updated.
 
-Guard Protocol 5 uses no custom network message. Peers receive the aggregate
+Guard Protocol 6 uses no custom network message. Peers receive the aggregate
 digest and per-Mod digest entries through STS2's native Mod-list handshake.
 Each per-Mod entry contains the manifest ID and a package digest—not file
 contents, absolute paths, settings, saves or account data.
@@ -102,19 +105,39 @@ is shown through STS2's native fullscreen status text.
 - `Ctrl+F8` opens a bounded local health/soft-lock snapshot. It checks current
   metadata freshness without rereading every file byte and never cancels an
   action or declares a player responsible.
-- Coordination uses five fixed, localized statuses—never peer-supplied free
-  text. Exact hand sharing and checkpoint forensics are off by default,
-  require unanimous per-session consent and revoke immediately when membership
-  changes. Contribution counters and their separate sharing toggle are
-  optional, factual and explicitly non-scoring.
-- Local forensics records bounded public action/checkpoint metadata, RNG call
-  counts without values or seeds, heartbeat age and the earliest observed
-  divergent category. A push-only API lets another loaded Mod publish bounded
-  diagnostic state/events; publisher identity and rate/size limits are
-  enforced.
+- Coordination includes five fixed localized statuses plus plain peer text.
+  Text is normalized Unicode, limited to 384 UTF-8 bytes/four lines, rendered
+  without markup, host-relayed with per-sender and room rate limits, kept only
+  in bounded session memory and never written to logs or reports.
+- Exact hand sharing remains off by default and requires unanimous
+  per-session consent. Each viewer selects one teammate; change-driven
+  snapshots are routed only to current watchers, marked stale after one second
+  and hidden after three seconds. Membership/session changes or revocation
+  clear consent and cached cards immediately.
+- Seed/RNG analysis observes the existing 12 deterministic run streams without
+  making an RNG call. Peers exchange session-salted seed tags plus bounded
+  call-count/rolling-digest summaries at natural checkpoints. Raw seed and
+  recent arguments/results remain local and hidden until explicitly revealed.
+- For five or more players, ready/start is fail-closed until every peer proves
+  the exact supported `STS2-MultiplayerLimitBreak` v0.1.3/RitsuLib contract,
+  runtime patch groups, capacity/bit widths and synchronized scaling settings.
+  BetterCoop never changes Limit Break settings, layout or scaling.
+- Experimental room-node rollback is off by default and its enabled setting
+  must match every peer. The host can select only complete native multiplayer
+  saves archived at visited stable nodes. Prepare requires the complete
+  original roster at a quiescent map boundary; activation uses an atomic
+  replace with an independently hashed emergency backup; STS2 then recreates
+  its native loaded-run lobby and all original peers must rejoin and verify the
+  canonical run/node identity before Ready or Commit is allowed. Failure after
+  activation closes the lobby and leaves explicit host recovery available.
+- Local forensics records bounded public action/checkpoint metadata, heartbeat
+  age and the earliest observed divergent category. A push-only API lets
+  another loaded Mod publish bounded diagnostic state/events; publisher
+  identity and rate/size limits are enforced.
 - Environment export, save sidecars, history and settings use schema/size
-  bounds and atomic writes. No feature edits the STS2 save, Mod list, patch
-  order or Workshop state.
+  bounds and atomic writes. Outside an explicitly confirmed rollback,
+  BetterCoop does not edit the STS2 save, Mod list, patch order or Workshop
+  state. Rollback never writes the in-memory run object, action queue or RNG.
 
 The implementation status and deliberate degraded modes for all 52 requested
 features are tracked in
@@ -125,9 +148,10 @@ STS2 also shows its native non-blocking confirmation. Snapshot, history and
 fatal-error reports remain local until the player explicitly copies or saves
 them; BetterCoop has no telemetry.
 
-BetterCoop does not modify combat, RNG, run or save state, and it never attempts
-to repair divergence. It is a compatibility guard for trusted co-op peers, not
-anti-cheat or remote attestation.
+BetterCoop does not modify combat or RNG and never attempts to repair a live
+divergence. Its only run/save mutation is the default-off, host-confirmed
+rollback transaction described above. It is a compatibility tool for trusted
+co-op peers, not anti-cheat or remote attestation.
 
 ## Build
 
@@ -148,7 +172,7 @@ dotnet build src/BetterCoop/BetterCoop.csproj `
   -c Release -warnaserror `
   -p:Sts2Path="C:\SteamLibrary\steamapps\common\Slay the Spire 2" `
   -p:CreateModPackage=true `
-  -p:PackageDir="C:\path\to\new\v0.5.0-stage"
+  -p:PackageDir="C:\path\to\new\v0.6.0-stage"
 ```
 
 The staging directory must contain exactly:
@@ -180,7 +204,8 @@ Per-Mod checks cover Unicode IDs, malformed entries, peer-controlled control
 characters, same-ID byte differences and Mods present on only one peer.
 Toolkit checks cover bounded codecs, consent/session rollover, contribution
 monotonicity, lockfiles, sidecars, report comparison, dependency graphs,
-preferences and deterministic parser fuzzing. Set
+preferences, Run Control roster/codec invariants, rollback archive/activation/
+recovery/corruption paths and deterministic parser fuzzing. Set
 `BETTERCOOP_FUZZ_ITERATIONS=1000000` for the release-gate fuzz run.
 
 ## Current boundaries
@@ -217,23 +242,27 @@ preferences and deterministic parser fuzzing. Set
   change makes the next connection or rejoin fail closed, but cannot undo state
   already executed in the current run.
 - Identical package bytes can still contain the same deterministic bug.
-- Running-game one-click recovery is `Unsupported` on STS2 `v0.109.1`; only
-  audited pre-run lobby re-entry is offered.
+- Room rollback is `Experimental` and Steam-only on STS2 `v0.109.1`. It is
+  available only when all peers enable Run Control and, above four players,
+  the exact Limit Break contract is proven. A failed post-activation
+  transaction closes the lobby; it never guesses between the target and the
+  preserved pre-rollback save.
 - F1 monster/public-effect categories are `Unsupported` on this build because
   STS2 exposes no audited stable public entity/owner identity for them. The
   remaining checkpoint categories report their availability explicitly.
 - G9 wire expansion remains disabled until the native receiver's allocation
-  bounds are audited. Local category comparison is active and Guard Protocol 5
+  bounds are audited. Local category comparison is active and Guard Protocol 6
   remains the fail-closed compatibility path.
 - Screen-reader narration is not guaranteed by the current Godot UI. Controls
   remain keyboard focusable, labeled, scalable to 200%, high-contrast capable
   and backed by copyable text.
-- Version `v0.5.0` targets STS2 `v0.109.1` (`c8c577f6`) and bundled .NET
-  `9.0.7`. Release build/self-check, 62-binding Harmony isolation smoke,
-  isolated Toolkit UI contract, real 2/3/4-client ENet matrix, 3-client
-  collaboration/API test and one-shot diagnostic fault recovery pass locally.
-  Steam transport and the eight-hour release soak remain controlled/manual
-  gates. Every game update requires the complete matrix to be repeated.
+- Version `v0.6.0` targets STS2 `v0.109.1` (`c8c577f6`) and bundled .NET
+  `9.0.7`. Release build, bounded parser fuzz, persistence/rollback self-check
+  and compile-time Harmony/native API contracts are automated. Real Steam
+  five-player rollback, 5/8-player loaded-run continuation and the eight-hour
+  soak remain controlled release gates; until their evidence is recorded,
+  those paths remain Experimental rather than release-proven. Every game or
+  Limit Break update requires the complete matrix to be repeated.
 
 Development evidence and command results are kept in
 [docs/WORKLOG.md](docs/WORKLOG.md).

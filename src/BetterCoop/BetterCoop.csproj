@@ -7,7 +7,7 @@
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <PathMap>$(MSBuildProjectDirectory)=/_/src/BetterCoop</PathMap>
-    <Version>0.5.0</Version>
+    <Version>0.6.0</Version>
     <AssemblyName>BetterCoop</AssemblyName>
     <RootNamespace>BetterCoop</RootNamespace>
     <NoWarn>$(NoWarn);MSB3270</NoWarn>

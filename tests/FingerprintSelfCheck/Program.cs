@@ -1,58 +1,59 @@
-using BetterCoop;
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Text;
+using BetterCoop;
 
 static void Check(bool condition, string message)
 {
-    if (!condition)
-    {
-        throw new InvalidOperationException(message);
-    }
+  if (!condition)
+  {
+    throw new InvalidOperationException(message);
+  }
 }
 
 static void Throws<TException>(Action action, string message)
     where TException : Exception
 {
-    try
-    {
-        action();
-    }
-    catch (TException)
-    {
-        return;
-    }
+  try
+  {
+    action();
+  }
+  catch (TException)
+  {
+    return;
+  }
 
-    throw new InvalidOperationException(message);
+  throw new InvalidOperationException(message);
 }
 
 static void WriteFixture(string root, bool reverse)
 {
-    (string path, byte[] bytes)[] files =
-    [
-        ("mod_manifest.json", """{"id":"Fixture","version":"1.0.0"}"""u8.ToArray()),
+  (string path, byte[] bytes)[] files =
+  [
+      ("mod_manifest.json", """{"id":"Fixture","version":"1.0.0"}"""u8.ToArray()),
         ("Fixture.dll", [0x01, 0x02, 0x03]),
         ("Fixture.pck", [0x04, 0x05]),
         ("data/rules.json", """{"damage":7}"""u8.ToArray()),
         ("images/art.png", [0x89, 0x50, 0x4E, 0x47]),
         ("empty.bin", [])
-    ];
+  ];
 
-    IEnumerable<(string path, byte[] bytes)> ordered = reverse ? files.Reverse() : files;
-    foreach ((string path, byte[] bytes) in ordered)
-    {
-        string fullPath = Path.Combine(root, path);
-        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-        File.WriteAllBytes(fullPath, bytes);
-    }
+  IEnumerable<(string path, byte[] bytes)> ordered = reverse ? files.Reverse() : files;
+  foreach ((string path, byte[] bytes) in ordered)
+  {
+    string fullPath = Path.Combine(root, path);
+    Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+    File.WriteAllBytes(fullPath, bytes);
+  }
 }
 
 Check(
-    FingerprintCodec.ProtocolVersion == 5
+    FingerprintCodec.ProtocolVersion == 6
     && FingerprintCodec.CompatibilityPrefix.Contains(
-        "-v5-",
-        StringComparison.Ordinal),
-    "Unsafe G9 wire expansion changed the audited protocol-5 fallback.");
+        "-v6-",
+        StringComparison.Ordinal)
+    && ToolkitEnvelopeCodec.Major == 2,
+    "BetterCoop v0.6 protocol versions are inconsistent.");
 
 IncidentText chineseDivergence = IncidentExplainer.ExplainNetwork(
     "StateDivergence",
@@ -167,7 +168,7 @@ Check(
 IncidentText incompatibleGuard = IncidentExplainer.ExplainNetwork(
     "ModMismatch",
     [FingerprintCodec.CompatibilityPrefix + "aaaaaaaa"],
-    [FingerprintCodec.CompatibilityFamilyPrefix + "6-bbbbbbbb"],
+    [FingerprintCodec.CompatibilityFamilyPrefix + "5-bbbbbbbb"],
     "ModMismatch",
     [],
     chinese: false)
@@ -229,28 +230,28 @@ Check(
 ];
 foreach ((string reason, string code) in networkCases)
 {
-    IncidentText chinese = IncidentExplainer.ExplainNetwork(
-        reason,
-        [],
-        [],
-        reason,
-        [],
-        chinese: true)
-        ?? throw new InvalidOperationException($"{reason} was not explained.");
-    IncidentText english = IncidentExplainer.ExplainNetwork(
-        reason,
-        [],
-        [],
-        reason,
-        [],
-        chinese: false)
-        ?? throw new InvalidOperationException($"{reason} was not explained.");
-    Check(
-        chinese.Code == code
-            && english.Code == code
-            && chinese.Body.Contains("根因", StringComparison.Ordinal)
-            && english.Body.Contains("Root cause", StringComparison.Ordinal),
-        $"{reason} did not retain complete Chinese and English explanations.");
+  IncidentText chinese = IncidentExplainer.ExplainNetwork(
+      reason,
+      [],
+      [],
+      reason,
+      [],
+      chinese: true)
+      ?? throw new InvalidOperationException($"{reason} was not explained.");
+  IncidentText english = IncidentExplainer.ExplainNetwork(
+      reason,
+      [],
+      [],
+      reason,
+      [],
+      chinese: false)
+      ?? throw new InvalidOperationException($"{reason} was not explained.");
+  Check(
+      chinese.Code == code
+          && english.Code == code
+          && chinese.Body.Contains("根因", StringComparison.Ordinal)
+          && english.Body.Contains("Root cause", StringComparison.Ordinal),
+      $"{reason} did not retain complete Chinese and English explanations.");
 }
 
 (string ExceptionType, string Code)[] exceptionCases =
@@ -262,16 +263,16 @@ foreach ((string reason, string code) in networkCases)
 ];
 foreach ((string exceptionType, string code) in exceptionCases)
 {
-    IncidentText incident = IncidentExplainer.ExplainException(
-        exceptionType,
-        "FixtureMod",
-        "FixtureDependency.dll",
-        "MegaAnimationState.SetAnimation changed",
-        chinese: false);
-    Check(
-        incident.Code == code
-            && incident.Body.Contains("Root cause", StringComparison.Ordinal),
-        $"{exceptionType} was not mapped to its expected root cause.");
+  IncidentText incident = IncidentExplainer.ExplainException(
+      exceptionType,
+      "FixtureMod",
+      "FixtureDependency.dll",
+      "MegaAnimationState.SetAnimation changed",
+      chinese: false);
+  Check(
+      incident.Code == code
+          && incident.Body.Contains("Root cause", StringComparison.Ordinal),
+      $"{exceptionType} was not mapped to its expected root cause.");
 }
 
 IncidentText unattributedApi = IncidentExplainer.ExplainException(
@@ -469,11 +470,11 @@ Check(
 FlightRecorder recorder = new();
 for (int index = 0; index < FlightRecorder.Capacity + 5; index++)
 {
-    recorder.Record(
-        TimelineEventKind.Progress,
-        "CG-TEST",
-        "peer\n" + index,
-        new string('界', 600) + "\u0001");
+  recorder.Record(
+      TimelineEventKind.Progress,
+      "CG-TEST",
+      "peer\n" + index,
+      new string('界', 600) + "\u0001");
 }
 
 IReadOnlyList<TimelineEntry> timeline = recorder.Snapshot(100);
@@ -530,13 +531,13 @@ Check(
 NetworkHistory history = new();
 for (int index = 0; index < NetworkHistory.Capacity + 3; index++)
 {
-    history.Add(new NetworkSample(
-        index,
-        index,
-        0.01f,
-        0.5,
-        RemoteIsLoading: false,
-        Connected: true));
+  history.Add(new NetworkSample(
+      index,
+      index,
+      0.01f,
+      0.5,
+      RemoteIsLoading: false,
+      Connected: true));
 }
 Check(
     history.Count == NetworkHistory.Capacity
@@ -570,12 +571,12 @@ AlertCenter alerts = new();
 long alertNow = Stopwatch.GetTimestamp();
 for (int index = 0; index < 20; index++)
 {
-    alerts.Add(
-        AlertSeverity.Warning,
-        "CG-NETWORK",
-        "P1",
-        "packet loss",
-        alertNow + index);
+  alerts.Add(
+      AlertSeverity.Warning,
+      "CG-NETWORK",
+      "P1",
+      "packet loss",
+      alertNow + index);
 }
 Check(
     alerts.Snapshot().Count == 1
@@ -584,12 +585,12 @@ Check(
 alerts.Clear();
 for (int index = 0; index < AlertCenter.Capacity; index++)
 {
-    alerts.Add(
-        AlertSeverity.Fatal,
-        "CG-FATAL-" + index,
-        "local",
-        "fatal",
-        alertNow + index);
+  alerts.Add(
+      AlertSeverity.Fatal,
+      "CG-FATAL-" + index,
+      "local",
+      "fatal",
+      alertNow + index);
 }
 alerts.Add(
     AlertSeverity.Fatal,
@@ -617,7 +618,7 @@ PeerIdentityMap identities = new();
 PeerIdentity firstIdentity = identities.GetOrAdd(42);
 for (ulong index = 43; index < 55; index++)
 {
-    identities.GetOrAdd(index);
+  identities.GetOrAdd(index);
 }
 Check(
     identities.GetOrAdd(42) == firstIdentity
@@ -727,7 +728,7 @@ Check(
 ToolkitSendLimiter sendLimiter = new();
 long limiterNow = Stopwatch.GetTimestamp();
 Check(
-    Enumerable.Range(0, ToolkitSendLimiter.Burst)
+    Enumerable.Range(0, ToolkitSendLimiter.DefaultBurst)
         .All(_ => sendLimiter.TryConsume(1, limiterNow))
         && !sendLimiter.TryConsume(1, limiterNow)
         && sendLimiter.TryConsume(
@@ -780,212 +781,319 @@ System.Globalization.CultureInfo originalCulture =
     System.Globalization.CultureInfo.CurrentCulture;
 try
 {
-    System.Globalization.CultureInfo.CurrentCulture =
-        System.Globalization.CultureInfo.GetCultureInfo("ar-EG");
-    Check(
-        FingerprintCodec.Line(12345, 1.5) == "12345|1.5",
-        "Canonical numeric fields became locale-dependent.");
+  System.Globalization.CultureInfo.CurrentCulture =
+      System.Globalization.CultureInfo.GetCultureInfo("ar-EG");
+  Check(
+      FingerprintCodec.Line(12345, 1.5) == "12345|1.5",
+      "Canonical numeric fields became locale-dependent.");
 }
 finally
 {
-    System.Globalization.CultureInfo.CurrentCulture = originalCulture;
+  System.Globalization.CultureInfo.CurrentCulture = originalCulture;
 }
 
 DirectoryInfo persistenceTemporary =
     Directory.CreateTempSubdirectory("bettercoop-persistence-selfcheck-");
 try
 {
-    string reportsRoot = Path.Combine(
-        persistenceTemporary.FullName,
-        "reports");
-    ToolkitReportHistory.Configure(reportsRoot);
+  string reportsRoot = Path.Combine(
+      persistenceTemporary.FullName,
+      "reports");
+  ToolkitReportHistory.Configure(reportsRoot);
+  ToolkitReportHistory.Remember(
+      "token=secret C:\\Users\\fixture\\save.dat");
+  Check(
+      !Directory.Exists(reportsRoot),
+      "Report history created files before explicit user save.");
+  for (int index = 0;
+       index < ToolkitReportHistory.MaxReports + 1;
+       index++)
+  {
     ToolkitReportHistory.Remember(
-        "token=secret C:\\Users\\fixture\\save.dat");
+        $"report {index} token=secret C:\\Users\\fixture\\save.dat");
     Check(
-        !Directory.Exists(reportsRoot),
-        "Report history created files before explicit user save.");
-    for (int index = 0;
-         index < ToolkitReportHistory.MaxReports + 1;
-         index++)
-    {
-        ToolkitReportHistory.Remember(
-            $"report {index} token=secret C:\\Users\\fixture\\save.dat");
-        Check(
-            ToolkitReportHistory.TrySaveLatest(out _),
-            "An explicit report save failed in a writable directory.");
-    }
+        ToolkitReportHistory.TrySaveLatest(out _),
+        "An explicit report save failed in a writable directory.");
+  }
 
-    string[] reportFiles = Directory.GetFiles(reportsRoot, "report-*.txt");
-    Check(
-        reportFiles.Length == ToolkitReportHistory.MaxReports
-            && reportFiles.All(path =>
-            {
-                string text = File.ReadAllText(path);
-                return !text.Contains("secret", StringComparison.Ordinal)
-                    && !text.Contains("C:\\Users", StringComparison.Ordinal);
-            }),
-        "Manual report retention or pre-write redaction failed.");
-    IReadOnlyList<string> reportNames =
-        ToolkitReportHistory.ReportNames();
-    Check(
-        reportNames.Count == ToolkitReportHistory.MaxReports
-            && ToolkitReportHistory.TryRead(
-                reportNames[0],
-                out string savedReport,
-                out _)
-            && savedReport.StartsWith("report ", StringComparison.Ordinal)
-            && !ToolkitReportHistory.TryRead(
-                "..\\outside.txt",
-                out _,
-                out _)
-            && !ToolkitReportHistory.TryDelete(
-                "..\\outside.txt",
-                out _),
-        "Report history listing/read path validation failed.");
-    Check(
-        ToolkitReportHistory.TryDelete(reportNames[0], out _)
-            && ToolkitReportHistory.ReportCount()
-                == ToolkitReportHistory.MaxReports - 1
-            && ToolkitReportHistory.Clear()
-                == ToolkitReportHistory.MaxReports - 1
-            && ToolkitReportHistory.ReportCount() == 0,
-        "Report history single-delete or clear failed.");
+  string[] reportFiles = Directory.GetFiles(reportsRoot, "report-*.txt");
+  Check(
+      reportFiles.Length == ToolkitReportHistory.MaxReports
+          && reportFiles.All(path =>
+          {
+            string text = File.ReadAllText(path);
+            return !text.Contains("secret", StringComparison.Ordinal)
+                  && !text.Contains("C:\\Users", StringComparison.Ordinal);
+          }),
+      "Manual report retention or pre-write redaction failed.");
+  IReadOnlyList<string> reportNames =
+      ToolkitReportHistory.ReportNames();
+  Check(
+      reportNames.Count == ToolkitReportHistory.MaxReports
+          && ToolkitReportHistory.TryRead(
+              reportNames[0],
+              out string savedReport,
+              out _)
+          && savedReport.StartsWith("report ", StringComparison.Ordinal)
+          && !ToolkitReportHistory.TryRead(
+              "..\\outside.txt",
+              out _,
+              out _)
+          && !ToolkitReportHistory.TryDelete(
+              "..\\outside.txt",
+              out _),
+      "Report history listing/read path validation failed.");
+  Check(
+      ToolkitReportHistory.TryDelete(reportNames[0], out _)
+          && ToolkitReportHistory.ReportCount()
+              == ToolkitReportHistory.MaxReports - 1
+          && ToolkitReportHistory.Clear()
+              == ToolkitReportHistory.MaxReports - 1
+          && ToolkitReportHistory.ReportCount() == 0,
+      "Report history single-delete or clear failed.");
 
-    string preferencesRoot = Path.Combine(
-        persistenceTemporary.FullName,
-        "preferences");
-    Check(
-        ToolkitPreferenceStore.ConfigureAndLoad(preferencesRoot)
-            == ToolkitPreferences.Default,
-        "Missing preferences did not use safe defaults.");
-    ToolkitPreferences preferences = ToolkitPreferences.Default with
-    {
-        SoundEnabled = false,
-        SoundVolume = 0.25f,
-        UiScale = 2f,
-        ReducedMotion = true,
-        HighContrast = true
-    };
-    Check(
-        ToolkitPreferenceStore.TrySave(preferences, out _)
-            && ToolkitPreferenceStore.ConfigureAndLoad(preferencesRoot)
-                == preferences
-            && !File.Exists(Path.Combine(
-                preferencesRoot,
-                "preferences.json.tmp")),
-        "Preferences did not round-trip through an atomic bounded save.");
-    File.WriteAllText(
-        Path.Combine(preferencesRoot, "preferences.json"),
-        """{"Schema":1,"SoundVolume":99,"UiScale":0}""");
-    Check(
-        ToolkitPreferenceStore.ConfigureAndLoad(preferencesRoot)
-            == ToolkitPreferences.Default,
-        "Invalid preferences did not fail open to safe defaults.");
+  string preferencesRoot = Path.Combine(
+      persistenceTemporary.FullName,
+      "preferences");
+  Check(
+      ToolkitPreferenceStore.ConfigureAndLoad(preferencesRoot)
+          == ToolkitPreferences.Default,
+      "Missing preferences did not use safe defaults.");
+  ToolkitPreferences preferences = ToolkitPreferences.Default with
+  {
+    SoundEnabled = false,
+    SoundVolume = 0.25f,
+    UiScale = 2f,
+    ReducedMotion = true,
+    HighContrast = true,
+    RollbackEnabled = true
+  };
+  Check(
+      ToolkitPreferenceStore.TrySave(preferences, out _)
+          && ToolkitPreferenceStore.ConfigureAndLoad(preferencesRoot)
+              == preferences
+          && !File.Exists(Path.Combine(
+              preferencesRoot,
+              "preferences.json.tmp")),
+      "Preferences did not round-trip through an atomic bounded save.");
+  File.WriteAllText(
+      Path.Combine(preferencesRoot, "preferences.json"),
+      """{"Schema":1,"SoundVolume":99,"UiScale":0}""");
+  Check(
+      ToolkitPreferenceStore.ConfigureAndLoad(preferencesRoot)
+          == ToolkitPreferences.Default,
+      "Invalid preferences did not fail open to safe defaults.");
 
-    string sidecarRoot = Path.Combine(
-        persistenceTemporary.FullName,
-        "sidecars");
-    string nativeSave = Path.Combine(
-        persistenceTemporary.FullName,
-        "current_multiplayer_run.save");
-    byte[] originalSave = "secret-save-bytes"u8.ToArray();
-    File.WriteAllBytes(nativeSave, originalSave);
-    SaveEnvironmentStamp saveEnvironment = new(
-        "v0.109.1",
-        4,
-        FingerprintCodec.Hash("environment"),
-        FingerprintCodec.Hash("mods"),
-        string.Empty,
-        FingerprintCodec.Hash("manifest"),
-        FingerprintCodec.Hash("assembly"),
-        FingerprintCodec.Hash("content"),
-        FingerprintCodec.Hash("other"),
-        string.Empty);
-    SaveEnvironmentSidecars.Configure(sidecarRoot);
-    Check(
-        SaveEnvironmentSidecars.TrySeal(
-            nativeSave,
-            saveEnvironment,
-            out _)
-        && File.ReadAllBytes(nativeSave).SequenceEqual(originalSave)
-        && SaveEnvironmentSidecars.Review(
-            nativeSave,
-            saveEnvironment).State
-            == SaveSealState.MatchingLocalRecord,
-        "A native save was changed or its matching local sidecar was rejected.");
-    SaveEnvironmentStamp changedEnvironment = saveEnvironment with
-    {
-        AssemblyDigest = FingerprintCodec.Hash("changed assembly")
-    };
-    SaveSealReview environmentReview = SaveEnvironmentSidecars.Review(
-        nativeSave,
-        changedEnvironment);
-    Check(
-        environmentReview.State == SaveSealState.EnvironmentMismatch
-            && environmentReview.Differences.Contains("assemblies"),
-        "A sealed save did not classify an assembly-category environment difference.");
-    string sidecarFile = Directory.EnumerateFiles(
-            Path.Combine(sidecarRoot, "save-environments"),
-            "*.sidecar",
-            SearchOption.TopDirectoryOnly)
-        .Single();
-    string sidecarJson = File.ReadAllText(sidecarFile);
-    Check(
-        new FileInfo(sidecarFile).Length
-            <= SaveEnvironmentSidecars.MaxSidecarBytes
-        && !sidecarJson.Contains(
-            nativeSave,
-            StringComparison.OrdinalIgnoreCase)
-        && !sidecarJson.Contains(
-            "secret-save-bytes",
-            StringComparison.Ordinal),
-        "A sidecar exceeded bounds or stored a native path/content.");
-    File.WriteAllBytes(
-        nativeSave,
-        "changed-save-byte"u8.ToArray());
-    Check(
-        SaveEnvironmentSidecars.Review(
-            nativeSave,
-            saveEnvironment).State
-            == SaveSealState.SaveBindingMismatch,
-        "Changed native save bytes were accepted by an existing sidecar.");
-    File.WriteAllText(sidecarFile + ".tmp", "partial");
-    SaveEnvironmentSidecars.Configure(sidecarRoot);
-    Check(
-        !File.Exists(sidecarFile + ".tmp")
-            && File.Exists(sidecarFile),
-        "Stale sidecar temp cleanup removed a complete record or kept a partial one.");
+  string sidecarRoot = Path.Combine(
+      persistenceTemporary.FullName,
+      "sidecars");
+  string nativeSave = Path.Combine(
+      persistenceTemporary.FullName,
+      "current_multiplayer_run.save");
+  byte[] originalSave = "secret-save-bytes"u8.ToArray();
+  File.WriteAllBytes(nativeSave, originalSave);
+  SaveEnvironmentStamp saveEnvironment = new(
+      "v0.109.1",
+      4,
+      FingerprintCodec.Hash("environment"),
+      FingerprintCodec.Hash("mods"),
+      string.Empty,
+      FingerprintCodec.Hash("manifest"),
+      FingerprintCodec.Hash("assembly"),
+      FingerprintCodec.Hash("content"),
+      FingerprintCodec.Hash("other"),
+      string.Empty);
+  SaveEnvironmentSidecars.Configure(sidecarRoot);
+  Check(
+      SaveEnvironmentSidecars.TrySeal(
+          nativeSave,
+          saveEnvironment,
+          out _)
+      && File.ReadAllBytes(nativeSave).SequenceEqual(originalSave)
+      && SaveEnvironmentSidecars.Review(
+          nativeSave,
+          saveEnvironment).State
+          == SaveSealState.MatchingLocalRecord,
+      "A native save was changed or its matching local sidecar was rejected.");
+  SaveEnvironmentStamp changedEnvironment = saveEnvironment with
+  {
+    AssemblyDigest = FingerprintCodec.Hash("changed assembly")
+  };
+  SaveSealReview environmentReview = SaveEnvironmentSidecars.Review(
+      nativeSave,
+      changedEnvironment);
+  Check(
+      environmentReview.State == SaveSealState.EnvironmentMismatch
+          && environmentReview.Differences.Contains("assemblies"),
+      "A sealed save did not classify an assembly-category environment difference.");
+  string sidecarFile = Directory.EnumerateFiles(
+          Path.Combine(sidecarRoot, "save-environments"),
+          "*.sidecar",
+          SearchOption.TopDirectoryOnly)
+      .Single();
+  string sidecarJson = File.ReadAllText(sidecarFile);
+  Check(
+      new FileInfo(sidecarFile).Length
+          <= SaveEnvironmentSidecars.MaxSidecarBytes
+      && !sidecarJson.Contains(
+          nativeSave,
+          StringComparison.OrdinalIgnoreCase)
+      && !sidecarJson.Contains(
+          "secret-save-bytes",
+          StringComparison.Ordinal),
+      "A sidecar exceeded bounds or stored a native path/content.");
+  File.WriteAllBytes(
+      nativeSave,
+      "changed-save-byte"u8.ToArray());
+  Check(
+      SaveEnvironmentSidecars.Review(
+          nativeSave,
+          saveEnvironment).State
+          == SaveSealState.SaveBindingMismatch,
+      "Changed native save bytes were accepted by an existing sidecar.");
+  File.WriteAllText(sidecarFile + ".tmp", "partial");
+  SaveEnvironmentSidecars.Configure(sidecarRoot);
+  Check(
+      !File.Exists(sidecarFile + ".tmp")
+          && File.Exists(sidecarFile),
+      "Stale sidecar temp cleanup removed a complete record or kept a partial one.");
 
-    string markerRoot = Path.Combine(
-        persistenceTemporary.FullName,
-        "marker");
-    string crashLog = Path.Combine(
-        persistenceTemporary.FullName,
-        "godot.log");
-    File.WriteAllText(
-        crashLog,
-        "previous lines\nFatal error. 0xC0000005\n");
-    Check(
-        ToolkitCrashMarker.Start(markerRoot, crashLog) == null,
-        "A clean first launch incorrectly reported an old crash.");
-    ToolkitCrashMarker.UpdateStage("waiting-initial-info");
-    CrashReview review = ToolkitCrashMarker.Start(markerRoot, crashLog)
-        ?? throw new InvalidOperationException(
-            "A stale crash marker was not reviewed.");
-    Check(
-        review.Confidence == CrashReviewConfidence.High
-            && review.Signature == "native-access-violation"
-            && review.LastStage == "waiting-initial-info",
-        "Crash review did not separate marker evidence and native signature.");
-    ToolkitCrashMarker.Finish();
-    Check(
-        !File.Exists(Path.Combine(markerRoot, "session.marker")),
-        "A normal finish did not remove the crash marker.");
+  string rollbackRoot = Path.Combine(
+      persistenceTemporary.FullName,
+      "rollback");
+  string rollbackSave = Path.Combine(
+      persistenceTemporary.FullName,
+      "rollback-current.save");
+  byte[] checkpointBytes = "checkpoint-node-b"u8.ToArray();
+  byte[] preRollbackBytes = "current-node-c"u8.ToArray();
+  File.WriteAllBytes(rollbackSave, checkpointBytes);
+  RollbackCheckpointJournal.Configure(rollbackRoot);
+  RollbackCheckpointBinding rollbackBinding = new(
+      FingerprintCodec.Hash("run"),
+      Guid.NewGuid().ToString("N"),
+      string.Empty,
+      0,
+      1,
+      1,
+      9,
+      8,
+      2,
+      "Act 1, node 8:2",
+      "v0.109.1",
+      6,
+      FingerprintCodec.Hash("environment"),
+      new string('a', 32),
+      FingerprintCodec.Hash("seed-tag"),
+      FingerprintCodec.Hash("rng"));
+  Check(
+      RollbackCheckpointJournal.TryArchive(
+          rollbackSave,
+          rollbackBinding,
+          out RollbackCheckpointMetadata? archived,
+          out _)
+      && archived != null
+      && RollbackCheckpointJournal.TryArchive(
+          rollbackSave,
+          rollbackBinding,
+          out RollbackCheckpointMetadata? duplicate,
+          out _)
+      && duplicate?.CheckpointId == archived.CheckpointId
+      && RollbackCheckpointJournal.List(
+          rollbackBinding.RunId) is [{ } listed]
+      && listed.CheckpointId == archived.CheckpointId
+      && RollbackCheckpointIdentity.Create(listed).Length
+          == ToolkitRunControlCodec.DigestBytes,
+      "R1 checkpoint archive, de-duplication or verified listing failed.");
+  RollbackCheckpointMetadata archivedCheckpoint = archived
+      ?? throw new InvalidOperationException(
+          "R1 archive unexpectedly returned null metadata.");
+  File.WriteAllBytes(rollbackSave, preRollbackBytes);
+  Guid recoveryTransaction = Guid.NewGuid();
+  Check(
+      RollbackCheckpointJournal.TryActivate(
+          archivedCheckpoint.CheckpointId,
+          recoveryTransaction,
+          rollbackSave,
+          out _,
+          out _)
+      && File.ReadAllBytes(rollbackSave)
+          .SequenceEqual(checkpointBytes)
+      && RollbackCheckpointJournal.TryGetRecoveryTransaction(
+          out Guid pendingRecovery)
+      && pendingRecovery == recoveryTransaction
+      && RollbackCheckpointJournal.TryRecover(
+          recoveryTransaction,
+          out _)
+      && File.ReadAllBytes(rollbackSave)
+          .SequenceEqual(preRollbackBytes),
+      "R1 atomic activation or explicit emergency recovery failed.");
+  Guid commitTransaction = Guid.NewGuid();
+  Check(
+      RollbackCheckpointJournal.TryActivate(
+          archivedCheckpoint.CheckpointId,
+          commitTransaction,
+          rollbackSave,
+          out _,
+          out _)
+      && RollbackCheckpointJournal.TryCommit(
+          commitTransaction,
+          out _)
+      && File.ReadAllBytes(rollbackSave)
+          .SequenceEqual(checkpointBytes)
+      && RollbackCheckpointJournal.TryResolveActiveBranch(
+          rollbackSave,
+          out string resolvedRun,
+          out string resolvedBranch,
+          out string resolvedParent,
+          out ulong resolvedFork)
+      && resolvedRun == rollbackBinding.RunId
+      && resolvedBranch == commitTransaction.ToString("N")
+      && resolvedParent == rollbackBinding.BranchId
+      && resolvedFork == archivedCheckpoint.VisitIndex,
+      "R1 committed activation or branch-lineage recovery failed.");
+  string compressedCheckpoint = Path.Combine(
+      rollbackRoot,
+      "rollback-journal",
+      rollbackBinding.RunId,
+      archivedCheckpoint.CheckpointId + ".save.br");
+  byte[] corrupt = File.ReadAllBytes(compressedCheckpoint);
+  corrupt[0] ^= 0xFF;
+  File.WriteAllBytes(compressedCheckpoint, corrupt);
+  Check(
+      RollbackCheckpointJournal.List(
+          rollbackBinding.RunId).Count == 0,
+      "R1 corrupted checkpoint payload remained selectable.");
+
+  string markerRoot = Path.Combine(
+      persistenceTemporary.FullName,
+      "marker");
+  string crashLog = Path.Combine(
+      persistenceTemporary.FullName,
+      "godot.log");
+  File.WriteAllText(
+      crashLog,
+      "previous lines\nFatal error. 0xC0000005\n");
+  Check(
+      ToolkitCrashMarker.Start(markerRoot, crashLog) == null,
+      "A clean first launch incorrectly reported an old crash.");
+  ToolkitCrashMarker.UpdateStage("waiting-initial-info");
+  CrashReview review = ToolkitCrashMarker.Start(markerRoot, crashLog)
+      ?? throw new InvalidOperationException(
+          "A stale crash marker was not reviewed.");
+  Check(
+      review.Confidence == CrashReviewConfidence.High
+          && review.Signature == "native-access-violation"
+          && review.LastStage == "waiting-initial-info",
+      "Crash review did not separate marker evidence and native signature.");
+  ToolkitCrashMarker.Finish();
+  Check(
+      !File.Exists(Path.Combine(markerRoot, "session.marker")),
+      "A normal finish did not remove the crash marker.");
 }
 finally
 {
-    ToolkitCrashMarker.Finish();
-    Directory.Delete(persistenceTemporary.FullName, recursive: true);
+  ToolkitCrashMarker.Finish();
+  Directory.Delete(persistenceTemporary.FullName, recursive: true);
 }
 
 IReadOnlyList<DoctorFinding> doctorFindings = ModDependencyDoctor.Analyze(
@@ -1043,9 +1151,9 @@ ModBisectPlan bisectPlan = ModBisectPlanner.Create(
 Check(
     bisectPlan is
     {
-        Available: true,
-        CandidateGroups: 8,
-        MaximumRounds: <= 5
+      Available: true,
+      CandidateGroups: 8,
+      MaximumRounds: <= 5
     }
     && bisectPlan.Text.Contains(
         "Baseline: CommonA, CommonB",
@@ -1087,9 +1195,9 @@ SettingsDeclarationRead validSettingsDeclaration =
 Check(
     validSettingsDeclaration is
     {
-        Present: true,
-        Error.Length: 0,
-        Providers.Count: 2
+      Present: true,
+      Error.Length: 0,
+      Providers.Count: 2
     }
     && validSettingsDeclaration.Providers[1].ProviderId
         == "Fixture:combat",
@@ -1133,179 +1241,179 @@ Check(
 DirectoryInfo temporary = Directory.CreateTempSubdirectory("bettercoop-selfcheck-");
 try
 {
-    string firstRoot = Path.Combine(temporary.FullName, "first");
-    string secondRoot = Path.Combine(temporary.FullName, "second");
-    Directory.CreateDirectory(firstRoot);
-    Directory.CreateDirectory(secondRoot);
-    WriteFixture(firstRoot, reverse: false);
-    WriteFixture(secondRoot, reverse: true);
+  string firstRoot = Path.Combine(temporary.FullName, "first");
+  string secondRoot = Path.Combine(temporary.FullName, "second");
+  Directory.CreateDirectory(firstRoot);
+  Directory.CreateDirectory(secondRoot);
+  WriteFixture(firstRoot, reverse: false);
+  WriteFixture(secondRoot, reverse: true);
 
-    PackageCapture first = PackageHasher.Capture(firstRoot, 0, "Fixture");
-    PackageCapture same = PackageHasher.Capture(secondRoot, 0, "Fixture");
-    Check(first.Digest == same.Digest, "File creation order changed the package digest.");
-    Check(
-        first.Digest
-            == PackageHasher.Capture(firstRoot, 99, "Fixture").Digest,
-        "Mod load order leaked into the per-Mod package digest.");
-    Check(first.FileCount == 6, "Nested or empty package files were not captured.");
-    Check(
-        first.CanonicalText.Contains("data/rules.json", StringComparison.Ordinal),
-        "Nested relative paths were not included.");
-    Check(
-        !first.CanonicalText.Contains(firstRoot, StringComparison.OrdinalIgnoreCase),
-        "An absolute package path entered canonical wire data.");
-    Check(PackageHasher.IsCurrent(first), "An unchanged package failed the quick check.");
-    Throws<FingerprintLimitException>(
-        () => PackageHasher.Capture(firstRoot, 0, "Fixture", maxFiles: 1),
-        "A caller-supplied aggregate file limit was ignored.");
+  PackageCapture first = PackageHasher.Capture(firstRoot, 0, "Fixture");
+  PackageCapture same = PackageHasher.Capture(secondRoot, 0, "Fixture");
+  Check(first.Digest == same.Digest, "File creation order changed the package digest.");
+  Check(
+      first.Digest
+          == PackageHasher.Capture(firstRoot, 99, "Fixture").Digest,
+      "Mod load order leaked into the per-Mod package digest.");
+  Check(first.FileCount == 6, "Nested or empty package files were not captured.");
+  Check(
+      first.CanonicalText.Contains("data/rules.json", StringComparison.Ordinal),
+      "Nested relative paths were not included.");
+  Check(
+      !first.CanonicalText.Contains(firstRoot, StringComparison.OrdinalIgnoreCase),
+      "An absolute package path entered canonical wire data.");
+  Check(PackageHasher.IsCurrent(first), "An unchanged package failed the quick check.");
+  Throws<FingerprintLimitException>(
+      () => PackageHasher.Capture(firstRoot, 0, "Fixture", maxFiles: 1),
+      "A caller-supplied aggregate file limit was ignored.");
 
-    string mountedPckPath = Path.Combine(temporary.FullName, "mounted.pck");
-    File.WriteAllBytes(mountedPckPath, [0x10, 0x20, 0x30]);
-    MountedPckCapture mountedPck =
-        PackageHasher.CaptureMountedPck(mountedPckPath, maxBytes: 3);
-    Check(
-        PackageHasher.IsCurrent(mountedPck),
-        "An unchanged mounted PCK failed the quick check.");
-    Throws<FingerprintLimitException>(
-        () => PackageHasher.CaptureMountedPck(
-            mountedPckPath,
-            maxBytes: 2),
-        "A mounted PCK ignored the caller-supplied byte limit.");
-    DateTime mountedWriteTime = File.GetLastWriteTimeUtc(mountedPckPath);
-    File.WriteAllBytes(mountedPckPath, [0x10, 0x20, 0x31]);
-    File.SetLastWriteTimeUtc(mountedPckPath, mountedWriteTime);
-    MountedPckCapture changedMountedPck =
-        PackageHasher.CaptureMountedPck(mountedPckPath, maxBytes: 3);
-    Check(
-        mountedPck.Digest != changedMountedPck.Digest,
-        "Changed mounted-PCK bytes were not detected by a full capture.");
+  string mountedPckPath = Path.Combine(temporary.FullName, "mounted.pck");
+  File.WriteAllBytes(mountedPckPath, [0x10, 0x20, 0x30]);
+  MountedPckCapture mountedPck =
+      PackageHasher.CaptureMountedPck(mountedPckPath, maxBytes: 3);
+  Check(
+      PackageHasher.IsCurrent(mountedPck),
+      "An unchanged mounted PCK failed the quick check.");
+  Throws<FingerprintLimitException>(
+      () => PackageHasher.CaptureMountedPck(
+          mountedPckPath,
+          maxBytes: 2),
+      "A mounted PCK ignored the caller-supplied byte limit.");
+  DateTime mountedWriteTime = File.GetLastWriteTimeUtc(mountedPckPath);
+  File.WriteAllBytes(mountedPckPath, [0x10, 0x20, 0x31]);
+  File.SetLastWriteTimeUtc(mountedPckPath, mountedWriteTime);
+  MountedPckCapture changedMountedPck =
+      PackageHasher.CaptureMountedPck(mountedPckPath, maxBytes: 3);
+  Check(
+      mountedPck.Digest != changedMountedPck.Digest,
+      "Changed mounted-PCK bytes were not detected by a full capture.");
 
-    string rulesPath = Path.Combine(secondRoot, "data", "rules.json");
-    DateTime originalWriteTime = File.GetLastWriteTimeUtc(rulesPath);
-    File.WriteAllText(rulesPath, """{"damage":8}""");
-    File.SetLastWriteTimeUtc(rulesPath, originalWriteTime);
-    PackageCapture changedBytes = PackageHasher.Capture(secondRoot, 0, "Fixture");
-    Check(
-        first.TotalBytes == changedBytes.TotalBytes
-            && first.Digest != changedBytes.Digest,
-        "Same-length changed bytes with a restored timestamp were not detected.");
+  string rulesPath = Path.Combine(secondRoot, "data", "rules.json");
+  DateTime originalWriteTime = File.GetLastWriteTimeUtc(rulesPath);
+  File.WriteAllText(rulesPath, """{"damage":8}""");
+  File.SetLastWriteTimeUtc(rulesPath, originalWriteTime);
+  PackageCapture changedBytes = PackageHasher.Capture(secondRoot, 0, "Fixture");
+  Check(
+      first.TotalBytes == changedBytes.TotalBytes
+          && first.Digest != changedBytes.Digest,
+      "Same-length changed bytes with a restored timestamp were not detected.");
 
-    string oldName = Path.Combine(secondRoot, "images", "art.png");
-    string newName = Path.Combine(secondRoot, "images", "renamed.png");
-    File.Move(oldName, newName);
-    PackageCapture renamed = PackageHasher.Capture(secondRoot, 0, "Fixture");
-    Check(
-        changedBytes.Digest != renamed.Digest,
-        "Renaming a package file did not change the digest.");
+  string oldName = Path.Combine(secondRoot, "images", "art.png");
+  string newName = Path.Combine(secondRoot, "images", "renamed.png");
+  File.Move(oldName, newName);
+  PackageCapture renamed = PackageHasher.Capture(secondRoot, 0, "Fixture");
+  Check(
+      changedBytes.Digest != renamed.Digest,
+      "Renaming a package file did not change the digest.");
 
-    File.WriteAllBytes(Path.Combine(firstRoot, "new-empty.bin"), []);
-    PackageCapture added = PackageHasher.Capture(firstRoot, 0, "Fixture");
-    Check(first.Digest != added.Digest, "An added package file did not change the digest.");
-    Check(!PackageHasher.IsCurrent(first), "An added file passed the quick check.");
+  File.WriteAllBytes(Path.Combine(firstRoot, "new-empty.bin"), []);
+  PackageCapture added = PackageHasher.Capture(firstRoot, 0, "Fixture");
+  Check(first.Digest != added.Digest, "An added package file did not change the digest.");
+  Check(!PackageHasher.IsCurrent(first), "An added file passed the quick check.");
 
-    string onlineFirstRoot = Path.Combine(temporary.FullName, "online-first");
-    string onlineSecondRoot = Path.Combine(temporary.FullName, "online-second");
-    Directory.CreateDirectory(onlineFirstRoot);
-    Directory.CreateDirectory(onlineSecondRoot);
-    WriteFixture(onlineFirstRoot, reverse: false);
-    WriteFixture(onlineSecondRoot, reverse: true);
-    Directory.CreateDirectory(Path.Combine(onlineFirstRoot, "user_data"));
-    Directory.CreateDirectory(Path.Combine(onlineSecondRoot, "user_data"));
-    File.WriteAllText(Path.Combine(onlineFirstRoot, "log.oejson"), "first log");
-    File.WriteAllText(Path.Combine(onlineSecondRoot, "log.oejson"), "second log");
-    File.WriteAllText(Path.Combine(onlineFirstRoot, "log.oejson.tmp"), "first temp log");
-    File.WriteAllText(Path.Combine(onlineSecondRoot, "log.oejson.tmp"), "second temp log");
-    File.WriteAllText(
-        Path.Combine(onlineFirstRoot, "user_data", "card_art_selections.oejson"),
-        "first selection");
-    File.WriteAllText(
-        Path.Combine(onlineSecondRoot, "user_data", "card_art_selections.oejson"),
-        "second selection");
+  string onlineFirstRoot = Path.Combine(temporary.FullName, "online-first");
+  string onlineSecondRoot = Path.Combine(temporary.FullName, "online-second");
+  Directory.CreateDirectory(onlineFirstRoot);
+  Directory.CreateDirectory(onlineSecondRoot);
+  WriteFixture(onlineFirstRoot, reverse: false);
+  WriteFixture(onlineSecondRoot, reverse: true);
+  Directory.CreateDirectory(Path.Combine(onlineFirstRoot, "user_data"));
+  Directory.CreateDirectory(Path.Combine(onlineSecondRoot, "user_data"));
+  File.WriteAllText(Path.Combine(onlineFirstRoot, "log.oejson"), "first log");
+  File.WriteAllText(Path.Combine(onlineSecondRoot, "log.oejson"), "second log");
+  File.WriteAllText(Path.Combine(onlineFirstRoot, "log.oejson.tmp"), "first temp log");
+  File.WriteAllText(Path.Combine(onlineSecondRoot, "log.oejson.tmp"), "second temp log");
+  File.WriteAllText(
+      Path.Combine(onlineFirstRoot, "user_data", "card_art_selections.oejson"),
+      "first selection");
+  File.WriteAllText(
+      Path.Combine(onlineSecondRoot, "user_data", "card_art_selections.oejson"),
+      "second selection");
 
-    PackageCapture onlineFirst =
-        PackageHasher.Capture(
-            onlineFirstRoot,
-            0,
-            "OnlineExchange",
-            "1.2.0");
-    PackageCapture onlineSecond =
-        PackageHasher.Capture(
-            onlineSecondRoot,
-            0,
-            "OnlineExchange",
-            "1.2.0");
-    Check(
-        onlineFirst.Digest == onlineSecond.Digest && onlineFirst.FileCount == 6,
-        "OnlineExchange runtime data entered its package digest.");
-    File.WriteAllText(Path.Combine(onlineFirstRoot, "log.oejson"), "changed log");
-    File.WriteAllText(
-        Path.Combine(onlineFirstRoot, "user_data", "card_art_selections.oejson"),
-        "changed selection");
-    Check(
-        PackageHasher.IsCurrent(onlineFirst),
-        "Ignored OnlineExchange runtime data invalidated the quick check.");
-    Check(
-        PackageHasher.Capture(onlineFirstRoot, 0, "Fixture").Digest
-            != PackageHasher.Capture(onlineSecondRoot, 0, "Fixture").Digest,
-        "Runtime-data exclusions leaked into unrelated Mods.");
+  PackageCapture onlineFirst =
+      PackageHasher.Capture(
+          onlineFirstRoot,
+          0,
+          "OnlineExchange",
+          "1.2.0");
+  PackageCapture onlineSecond =
+      PackageHasher.Capture(
+          onlineSecondRoot,
+          0,
+          "OnlineExchange",
+          "1.2.0");
+  Check(
+      onlineFirst.Digest == onlineSecond.Digest && onlineFirst.FileCount == 6,
+      "OnlineExchange runtime data entered its package digest.");
+  File.WriteAllText(Path.Combine(onlineFirstRoot, "log.oejson"), "changed log");
+  File.WriteAllText(
+      Path.Combine(onlineFirstRoot, "user_data", "card_art_selections.oejson"),
+      "changed selection");
+  Check(
+      PackageHasher.IsCurrent(onlineFirst),
+      "Ignored OnlineExchange runtime data invalidated the quick check.");
+  Check(
+      PackageHasher.Capture(onlineFirstRoot, 0, "Fixture").Digest
+          != PackageHasher.Capture(onlineSecondRoot, 0, "Fixture").Digest,
+      "Runtime-data exclusions leaked into unrelated Mods.");
 
-    string unicodeFirstRoot = Path.Combine(temporary.FullName, "unicode-first");
-    string unicodeSecondRoot = Path.Combine(temporary.FullName, "unicode-second");
-    Directory.CreateDirectory(unicodeFirstRoot);
-    Directory.CreateDirectory(unicodeSecondRoot);
-    File.WriteAllText(Path.Combine(unicodeFirstRoot, "\u00e9.txt"), "same");
-    File.WriteAllText(Path.Combine(unicodeSecondRoot, "e\u0301.txt"), "same");
-    Check(
-        PackageHasher.Capture(unicodeFirstRoot, 0, "Fixture").Digest
-            != PackageHasher.Capture(unicodeSecondRoot, 0, "Fixture").Digest,
-        "Distinct raw Unicode paths collapsed to the same digest.");
+  string unicodeFirstRoot = Path.Combine(temporary.FullName, "unicode-first");
+  string unicodeSecondRoot = Path.Combine(temporary.FullName, "unicode-second");
+  Directory.CreateDirectory(unicodeFirstRoot);
+  Directory.CreateDirectory(unicodeSecondRoot);
+  File.WriteAllText(Path.Combine(unicodeFirstRoot, "\u00e9.txt"), "same");
+  File.WriteAllText(Path.Combine(unicodeSecondRoot, "e\u0301.txt"), "same");
+  Check(
+      PackageHasher.Capture(unicodeFirstRoot, 0, "Fixture").Digest
+          != PackageHasher.Capture(unicodeSecondRoot, 0, "Fixture").Digest,
+      "Distinct raw Unicode paths collapsed to the same digest.");
 
-    string unicodeRoot = Path.Combine(temporary.FullName, "unicode-collision");
-    Directory.CreateDirectory(unicodeRoot);
-    string composed = Path.Combine(unicodeRoot, "\u00e9.txt");
-    string decomposed = Path.Combine(unicodeRoot, "e\u0301.txt");
-    File.WriteAllText(composed, "one");
-    File.WriteAllText(decomposed, "two");
-    if (Directory.EnumerateFiles(unicodeRoot).Count() == 2)
-    {
-        Throws<InvalidDataException>(
-            () => PackageHasher.Capture(unicodeRoot, 0, "Fixture"),
-            "Unicode-normalized duplicate paths were not rejected.");
-    }
+  string unicodeRoot = Path.Combine(temporary.FullName, "unicode-collision");
+  Directory.CreateDirectory(unicodeRoot);
+  string composed = Path.Combine(unicodeRoot, "\u00e9.txt");
+  string decomposed = Path.Combine(unicodeRoot, "e\u0301.txt");
+  File.WriteAllText(composed, "one");
+  File.WriteAllText(decomposed, "two");
+  if (Directory.EnumerateFiles(unicodeRoot).Count() == 2)
+  {
+    Throws<InvalidDataException>(
+        () => PackageHasher.Capture(unicodeRoot, 0, "Fixture"),
+        "Unicode-normalized duplicate paths were not rejected.");
+  }
 
-    string outside = Path.Combine(temporary.FullName, "outside.bin");
-    string link = Path.Combine(secondRoot, "linked.bin");
-    File.WriteAllText(outside, "outside");
+  string outside = Path.Combine(temporary.FullName, "outside.bin");
+  string link = Path.Combine(secondRoot, "linked.bin");
+  File.WriteAllText(outside, "outside");
+  try
+  {
+    File.CreateSymbolicLink(link, outside);
     try
     {
-        File.CreateSymbolicLink(link, outside);
-        try
-        {
-            Throws<InvalidDataException>(
-                () => PackageHasher.Capture(secondRoot, 0, "Fixture"),
-                "A reparse point was followed instead of rejected.");
-            Throws<InvalidDataException>(
-                () => PackageHasher.CaptureMountedPck(
-                    link,
-                    maxBytes: 1024),
-                "A mounted-PCK reparse point was followed instead of rejected.");
-        }
-        finally
-        {
-            File.Delete(link);
-        }
+      Throws<InvalidDataException>(
+          () => PackageHasher.Capture(secondRoot, 0, "Fixture"),
+          "A reparse point was followed instead of rejected.");
+      Throws<InvalidDataException>(
+          () => PackageHasher.CaptureMountedPck(
+              link,
+              maxBytes: 1024),
+          "A mounted-PCK reparse point was followed instead of rejected.");
     }
-    catch (Exception ex) when (
-        ex is UnauthorizedAccessException
-        or PlatformNotSupportedException
-        or IOException)
+    finally
     {
-        Console.WriteLine("Reparse-point self-check skipped on this filesystem.");
+      File.Delete(link);
     }
+  }
+  catch (Exception ex) when (
+      ex is UnauthorizedAccessException
+      or PlatformNotSupportedException
+      or IOException)
+  {
+    Console.WriteLine("Reparse-point self-check skipped on this filesystem.");
+  }
 }
 finally
 {
-    Directory.Delete(temporary.FullName, recursive: true);
+  Directory.Delete(temporary.FullName, recursive: true);
 }
 
 F1CategoryDigest[] golden =
@@ -1339,11 +1447,11 @@ string[] expectedGolden =
 ];
 for (int index = 0; index < golden.Length; index++)
 {
-    Check(
-        golden[index].Available
-            && Convert.ToHexString(golden[index].Digest)
-                == expectedGolden[index],
-        $"F1SchemaV1 category {index + 1} differs from its independent golden vector.");
+  Check(
+      golden[index].Available
+          && Convert.ToHexString(golden[index].Digest)
+              == expectedGolden[index],
+      $"F1SchemaV1 category {index + 1} differs from its independent golden vector.");
 }
 
 F1CategoryDigest orderedPlayers = F1SchemaV1.Players(
@@ -1532,16 +1640,287 @@ Check(
         out _),
     "C9 uint/count-style allocation attack was accepted.");
 
+Check(
+    ToolkitTextCodec.TryEncode(
+        0,
+        "中文 e\u0301\nemoji 👩‍💻",
+        out byte[] textPayload)
+        && ToolkitTextCodec.TryDecode(
+            textPayload,
+            out ToolkitTextMessage textRoundTrip)
+        && textRoundTrip.OriginOrdinal == 0
+        && textRoundTrip.Text == "中文 é\nemoji 👩‍💻",
+    "C11 Unicode normalization/round trip failed.");
+Check(
+    !ToolkitTextCodec.TryEncode(0, "bad\0text", out _)
+        && !ToolkitTextCodec.TryEncode(0, "spoof\u202Ename", out _)
+        && !ToolkitTextCodec.TryEncode(0, "1\n2\n3\n4\n5", out _)
+        && !ToolkitTextCodec.TryEncode(
+            0,
+            "a" + string.Concat(
+                Enumerable.Repeat("\u0301", 9)),
+            out _)
+        && !ToolkitTextCodec.TryEncode(
+            0,
+            new string('x', ToolkitTextCodec.MaxUtf8Bytes + 1),
+            out _),
+    "C11 unsafe or oversized text was accepted.");
+
+ToolkitHandWatch watch = new(7, ToolkitLimits.MaxPlayers);
+byte[] watchPayload = ToolkitHandWatchCodec.Encode(watch);
+Check(
+    ToolkitHandWatchCodec.TryDecode(
+        watchPayload,
+        out ToolkitHandWatch watchRoundTrip)
+        && watchRoundTrip == watch
+        && ToolkitHandWatchCodec.Encode(
+            watch with
+            {
+              OwnerOrdinal = (byte)(ToolkitLimits.MaxPlayers + 1)
+            }).Length == 0,
+    "H13 hand-watch codec failed its player boundary.");
+
+Guid rngSession =
+    Guid.Parse("00112233-4455-6677-8899-aabbccddeeff");
+byte[] rngSeedTag = ToolkitSeedTag.Create(
+    rngSession,
+    0x0102030405060708UL);
+Check(
+    Convert.ToHexString(rngSeedTag)
+        == "77E313FBF6BD1873D5C35F74AA5412D33AB509BE3A308E4DE3E59DDE266E9733"
+        && ToolkitSeedTag.Create(Guid.Empty, 1).Length == 0,
+    "F9 seed-tag byte order or HMAC golden vector regressed.");
+
+ToolkitRngCounter.Enable();
+ToolkitRngCounter.Clear();
+ToolkitRngAnalyzer.Observe(0, 1, 10, 0, 4);
+ToolkitRngAnalyzer.Observe(0, 0, 0, 0, 1);
+ToolkitRngAnalyzer.Observe(-1, 0, 0, 0, 0);
+ToolkitRngAnalyzer.Observe(0, 0, 0, 0, 0, chaotic: true);
+ToolkitRngStreamSummary[] rngStreams =
+    ToolkitRngAnalyzer.Snapshot();
+ToolkitRngSummary rngSummary = new(
+    0,
+    7,
+    3,
+    11,
+    rngSeedTag,
+    rngStreams);
+Check(
+    rngStreams[0].Calls == 2
+        && rngStreams[0].RollingHash != 0
+        && ToolkitRngAnalyzer.UnknownCalls == 1
+        && ToolkitRngAnalyzer.ChaoticCalls == 1
+        && ToolkitRngAnalyzer.Recent(8) is
+        [
+        {
+          Stream: 0,
+          Method: 1,
+          CallIndex: 1,
+          ArgumentA: 10,
+          Result: 4
+        },
+        {
+          Stream: 0,
+          Method: 0,
+          CallIndex: 2,
+          Result: 1
+        }
+        ]
+        && ToolkitRngSummaryCodec.TryEncode(
+            rngSummary,
+            out byte[] rngPayload)
+        && rngPayload.Length == ToolkitRngSummaryCodec.PayloadBytes
+        && ToolkitRngSummaryCodec.TryDecode(
+            rngPayload,
+            out ToolkitRngSummary rngRoundTrip)
+        && rngRoundTrip.OriginOrdinal == 0
+        && rngRoundTrip.MembershipEpoch == 7
+        && rngRoundTrip.RollbackEpoch == 3
+        && rngRoundTrip.CheckpointId == 11
+        && rngRoundTrip.SeedTag.SequenceEqual(rngSeedTag)
+        && rngRoundTrip.Streams.SequenceEqual(rngStreams)
+        && !ToolkitRngSummaryCodec.TryDecode(
+            rngPayload.AsSpan(0, rngPayload.Length - 1),
+            out _),
+    "F9 bounded observer or summary codec regressed.");
+
+byte[] limitSettings =
+    ToolkitLimitBreakContract.DigestSettings(
+        enabled: true,
+        multiplier: 1.25);
+byte[] limitIdentity =
+    ToolkitLimitBreakContract.DigestIdentity(
+        "0.109.1",
+        "0.1.3",
+        "b2785afd3dc31fd6b32cb073af495ab343fcc31fa9e479049959ff43eb09356f",
+        "0.4.66");
+ToolkitLimitBreakCapability limitCapability = new(
+    0,
+    7,
+    ToolkitLimitBreakContract.RequiredFlags,
+    ToolkitLimitBreakContract.Capacity,
+    ToolkitLimitBreakContract.SlotBits,
+    ToolkitLimitBreakContract.ListBits,
+    1,
+    limitIdentity,
+    limitSettings);
+Check(
+    Convert.ToHexString(limitSettings)
+        == "341FC6E308723ACBB2AF258D79A3FF94"
+        && Convert.ToHexString(limitIdentity)
+            == "A7005D425C31BE596AE3D944F5E19D48"
+        && ToolkitLimitBreakContract.IsCompatible(
+            limitCapability,
+            out _)
+        && ToolkitLimitBreakContract.IsReadyCompatible(
+            limitCapability with
+            {
+              Flags = limitCapability.Flags
+                  & ~ToolkitLimitBreakFlags.SettingsSynchronized,
+              HostSettingsEpoch = 0
+            },
+            out _)
+        && !ToolkitLimitBreakContract.IsCompatible(
+            limitCapability with
+            {
+              Flags = limitCapability.Flags
+                  & ~ToolkitLimitBreakFlags.SettingsSynchronized,
+              HostSettingsEpoch = 0
+            },
+            out string pendingSettingsReason)
+        && pendingSettingsReason.Contains(
+            nameof(ToolkitLimitBreakFlags.SettingsSynchronized),
+            StringComparison.Ordinal)
+        && ToolkitLimitBreakCapabilityCodec.TryEncode(
+            limitCapability,
+            out byte[] limitPayload)
+        && limitPayload.Length
+            == ToolkitLimitBreakCapabilityCodec.PayloadBytes
+        && ToolkitLimitBreakCapabilityCodec.TryDecode(
+            limitPayload,
+            out ToolkitLimitBreakCapability limitRoundTrip)
+        && limitRoundTrip.OriginOrdinal == 0
+        && limitRoundTrip.MembershipEpoch == 7
+        && limitRoundTrip.Flags
+            == ToolkitLimitBreakContract.RequiredFlags
+        && limitRoundTrip.ContractDigest.SequenceEqual(
+            limitIdentity)
+        && limitRoundTrip.SettingsDigest.SequenceEqual(
+            limitSettings)
+        && !ToolkitLimitBreakContract.IsCompatible(
+            limitCapability with
+            {
+              Flags = limitCapability.Flags
+                  & ~ToolkitLimitBreakFlags.Enabled
+            },
+            out string limitReason)
+        && limitReason.Contains(
+            nameof(ToolkitLimitBreakFlags.Enabled),
+            StringComparison.Ordinal)
+        && !ToolkitLimitBreakCapabilityCodec.TryEncode(
+            limitCapability with
+            {
+              OriginOrdinal =
+                  (byte)(ToolkitLimits.MaxPlayers + 1)
+            },
+            out _),
+    "G13 capability contract, golden digest or codec regressed.");
+
+ToolkitRunControl runControl = new(
+    ToolkitRunControlAction.Prepare,
+    1,
+    ToolkitRunControlResult.None,
+    7,
+    3,
+    Guid.ParseExact(
+        "00112233445566778899aabbccddeeff",
+        "N"),
+    Guid.ParseExact(
+        "ffeeddccbbaa99887766554433221100",
+        "N"),
+    42,
+    Convert.FromHexString(
+        "000102030405060708090A0B0C0D0E0F"
+        + "101112131415161718191A1B1C1D1E1F"));
+Check(
+    ToolkitRunControlCodec.TryEncode(
+        runControl,
+        out byte[] runControlPayload)
+        && runControlPayload.Length
+            == ToolkitRunControlCodec.PayloadBytes
+        && ToolkitRunControlCodec.TryDecode(
+            runControlPayload,
+            out ToolkitRunControl runControlRoundTrip)
+        && runControlRoundTrip.Action == runControl.Action
+        && runControlRoundTrip.OriginOrdinal
+            == runControl.OriginOrdinal
+        && runControlRoundTrip.Result == runControl.Result
+        && runControlRoundTrip.MembershipEpoch
+            == runControl.MembershipEpoch
+        && runControlRoundTrip.RollbackEpoch
+            == runControl.RollbackEpoch
+        && runControlRoundTrip.TransactionId
+            == runControl.TransactionId
+        && runControlRoundTrip.CheckpointId
+            == runControl.CheckpointId
+        && runControlRoundTrip.VisitIndex
+            == runControl.VisitIndex
+        && runControlRoundTrip.CheckpointDigest.SequenceEqual(
+            runControl.CheckpointDigest)
+        && !ToolkitRunControlCodec.TryEncode(
+            runControl with
+            {
+              OriginOrdinal =
+                  (byte)(ToolkitLimits.MaxPlayers + 1)
+            },
+            out _)
+        && !ToolkitRunControlCodec.TryDecode(
+            runControlPayload.AsSpan(
+                0,
+                runControlPayload.Length - 1),
+            out _),
+    "R1 fixed Run Control codec or trust-boundary validation regressed.");
+ulong[] rollbackRoster = [11, 22, 33, 44, 55];
+Check(
+    !ToolkitRunControlRoster.AllResponded(
+        rollbackRoster,
+        [11],
+        new HashSet<ulong> { 11 })
+        && !ToolkitRunControlRoster.AllResponded(
+            rollbackRoster,
+            rollbackRoster,
+            new HashSet<ulong> { 11, 22, 33, 44 })
+        && ToolkitRunControlRoster.AllResponded(
+            rollbackRoster,
+            rollbackRoster,
+            rollbackRoster.ToHashSet())
+        && !ToolkitRunControlRoster.IsExact(
+            rollbackRoster,
+            [11, 22, 33, 44, 55, 66]),
+    "R1 committed before the complete original roster verified.");
+
+ToolkitSendLimiter customLimiter = new(
+    maxPeers: 1,
+    tokensPerSecond: 2,
+    burst: 2);
+Check(
+    customLimiter.TryConsume(1, 0)
+        && customLimiter.TryConsume(1, 0)
+        && !customLimiter.TryConsume(1, 0)
+        && customLimiter.TryConsume(1, Stopwatch.Frequency / 2),
+    "Configurable fair-send budget failed.");
+
 ToolkitContributionLedger ledger = new();
 Check(
     ledger.Add(1, 1, damage: 7, kills: 1)
         && !ledger.Add(1, 1, damage: 7)
         && ledger.Snapshot() is
         [
-            {
-                Damage: 7,
-                Kills: 1
-            }
+          {
+            Damage: 7,
+            Kills: 1
+          }
         ],
     "C10 event de-duplication failed.");
 ToolkitContributionSnapshot remoteContribution =
@@ -1578,26 +1957,31 @@ byte[] fuzzBytes = new byte[ToolkitEnvelopeCodec.MaxEncodedBytes];
 long fuzzAllocatedBefore = GC.GetAllocatedBytesForCurrentThread();
 for (int iteration = 0; iteration < fuzzIterations; iteration++)
 {
-    int length = fuzz.Next(fuzzBytes.Length + 1);
-    fuzz.NextBytes(fuzzBytes.AsSpan(0, length));
-    ReadOnlySpan<byte> input = fuzzBytes.AsSpan(0, length);
-    ToolkitEnvelopeCodec.TryDecode(input, out _, out _);
-    ToolkitConsentCodec.TryDecode(input, out _);
-    ToolkitHandSnapshotCodec.TryDecode(input, out _);
-    F1CheckpointCodec.TryDecode(input, out _);
-    F1CheckpointResultCodec.TryDecode(input, out _);
-    ToolkitContributionCodec.TryDecode(input, out _);
-    ToolkitStateCodec.TryDecode(input, out _);
-    if ((iteration & 1023) == 0)
-    {
-        ToolkitEnvelopeCodec.TryDecode(
-            encodedEnvelope,
-            out _,
-            out _);
-        ToolkitHandSnapshotCodec.TryDecode(
-            handPayload,
-            out _);
-    }
+  int length = fuzz.Next(fuzzBytes.Length + 1);
+  fuzz.NextBytes(fuzzBytes.AsSpan(0, length));
+  ReadOnlySpan<byte> input = fuzzBytes.AsSpan(0, length);
+  ToolkitEnvelopeCodec.TryDecode(input, out _, out _);
+  ToolkitConsentCodec.TryDecode(input, out _);
+  ToolkitTextCodec.TryDecode(input, out _);
+  ToolkitHandWatchCodec.TryDecode(input, out _);
+  ToolkitRngSummaryCodec.TryDecode(input, out _);
+  ToolkitLimitBreakCapabilityCodec.TryDecode(input, out _);
+  ToolkitRunControlCodec.TryDecode(input, out _);
+  ToolkitHandSnapshotCodec.TryDecode(input, out _);
+  F1CheckpointCodec.TryDecode(input, out _);
+  F1CheckpointResultCodec.TryDecode(input, out _);
+  ToolkitContributionCodec.TryDecode(input, out _);
+  ToolkitStateCodec.TryDecode(input, out _);
+  if ((iteration & 1023) == 0)
+  {
+    ToolkitEnvelopeCodec.TryDecode(
+        encodedEnvelope,
+        out _,
+        out _);
+    ToolkitHandSnapshotCodec.TryDecode(
+        handPayload,
+        out _);
+  }
 }
 
 long fuzzAllocated = GC.GetAllocatedBytesForCurrentThread()

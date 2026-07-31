@@ -3,6 +3,7 @@
 - Status: proposed
 - Date: 2026-07-29
 - Relates to: ADR 0002
+- Superseded in part by: ADR 0004
 
 ## Context
 

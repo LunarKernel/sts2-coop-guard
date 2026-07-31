@@ -1,0 +1,69 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{cs,csproj,props}]
+indent_style = space
+indent_size = 2
+tab_width = 2
+max_line_length = 100
+
+[*.cs]
+csharp_new_line_before_open_brace = all
+csharp_prefer_braces = true:error
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+
+dotnet_naming_rule.types_pascal_case.severity = error
+dotnet_naming_rule.types_pascal_case.symbols = types
+dotnet_naming_rule.types_pascal_case.style = pascal_case
+dotnet_naming_symbols.types.applicable_kinds = class, struct, interface, enum, delegate
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+dotnet_naming_rule.public_members_pascal_case.severity = error
+dotnet_naming_rule.public_members_pascal_case.symbols = public_members
+dotnet_naming_rule.public_members_pascal_case.style = pascal_case
+dotnet_naming_symbols.public_members.applicable_kinds = property, method, event
+dotnet_naming_symbols.public_members.applicable_accessibilities = public, internal, protected, protected_internal
+
+dotnet_naming_rule.private_fields_underscore.severity = error
+dotnet_naming_rule.private_fields_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_underscore.style = underscore_camel_case
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_style.underscore_camel_case.required_prefix = _
+dotnet_naming_style.underscore_camel_case.capitalization = camel_case
+
+dotnet_naming_rule.private_constants_pascal_case.severity = error
+dotnet_naming_rule.private_constants_pascal_case.symbols = private_constants
+dotnet_naming_rule.private_constants_pascal_case.style = pascal_case
+dotnet_naming_symbols.private_constants.applicable_kinds = field
+dotnet_naming_symbols.private_constants.applicable_accessibilities = private
+dotnet_naming_symbols.private_constants.required_modifiers = const
+
+dotnet_naming_rule.private_static_readonly_fields_pascal_case.severity = error
+dotnet_naming_rule.private_static_readonly_fields_pascal_case.symbols = private_static_readonly_fields
+dotnet_naming_rule.private_static_readonly_fields_pascal_case.style = pascal_case
+dotnet_naming_symbols.private_static_readonly_fields.applicable_kinds = field
+dotnet_naming_symbols.private_static_readonly_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_static_readonly_fields.required_modifiers = static, readonly
+
+# Intentional, reviewed exceptions to low-value framework analyzers:
+# - CA1711: ToolkitStateFlags is a real [Flags] enum.
+# - CA1000: Observation<T>.Capture is the single obvious generic factory.
+# - CA1859: interface-shaped internal APIs preserve call-site clarity; no
+#   benchmark demonstrates value from exposing concrete collection types.
+dotnet_diagnostic.CA1711.severity = none
+dotnet_diagnostic.CA1000.severity = none
+dotnet_diagnostic.CA1859.severity = none
+
+[*.{json,md,ps1}]
+indent_style = space
+indent_size = 2
+
+[*.md]
+end_of_line = lf

@@ -1158,3 +1158,106 @@ All timestamps use Asia/Taipei (UTC+08:00).
   check runs. This is a platform review state, not a private visibility
   setting.
 - The live game directory remained unchanged.
+
+### 14:58 - Bilingual Workshop description published
+
+- Created the recoverable pre-edit backup
+  `C:\SteamLibrary\steamapps\sts2-coop-guard-workshop.backup.pre-bilingual-description-20260730-145035`.
+- Expanded the existing Workshop description in English and Simplified
+  Chinese, with the English section shown first.
+- The description is 6,957 UTF-8 bytes and the workspace remains `public`.
+- Updated existing Workshop item `3772631781` in place; no duplicate item was
+  created and Mod dependencies were unchanged.
+- Steam rendered the English section before the Chinese section, retained the
+  482.193 KB package, and showed `Public` selected in the owner visibility
+  menu.
+- Steam again showed its temporary automated content-analysis notice. This is
+  a platform review state, not a private visibility setting.
+- `BetterCoop.dll` and `BetterCoop.json` remained byte-for-byte unchanged; no
+  gameplay, protocol, dependency or live-game files were modified.
+
+### 15:32 - BetterCoop v0.6.0 next-version design drafted
+
+- Added separate proposed technical design, acceptance and test-plan documents
+  for C11 bounded peer text, H13 one-action teammate hand viewing, R1
+  host-authoritative room-node rollback, G13 Multiplayer Limit Break
+  compatibility and F9 seed/RNG analysis.
+- Defined the required safety-contract ADR before implementation because peer
+  text, save restoration and seed display intentionally change three existing
+  repository invariants.
+- Reused the existing bounded diagnostics envelope, C9 consent/hand snapshot,
+  forensics hooks and atomic persistence pattern; proposed a separate
+  fail-closed Run Control transaction instead of treating rollback as optional
+  diagnostics.
+- Bound the initial >4-player profile to Workshop manifest ID
+  `STS2-MultiplayerLimitBreak` v0.1.3, its exact DLL hash and
+  `STS2-RitsuLib >=0.4.13`. Added per-peer runtime capability proof and hard
+  5/8-player loaded-run gates before R1 can be called supported.
+- Documented the repository-wide Google C# migration and executable style,
+  analyzer, warning, traceability and release-evidence gates as a separate
+  behavior-neutral change before feature work.
+- No runtime source, live game, Workshop item, GitHub state or published
+  package was changed. Build and multiplayer tests were not run because this
+  step produced design documents only.
+
+### 2026-07-31 02:49 - BetterCoop v0.6.0 implementation and high-player ENet smoke
+
+- Implemented C11 peer text, H13 one-action hand watch, F9 seed/RNG summaries,
+  G13 Limit Break capability proofs and experimental default-off R1 room-node
+  rollback under Guard Protocol 6 / diagnostics protocol 2.
+- Added bounded atomic rollback checkpoints, SHA-256 activation/recovery,
+  exact-roster two-phase Run Control, native loaded-lobby re-entry and
+  explicit emergency recovery. Corrupt checkpoint metadata is isolated per
+  entry and journal read/commit failures remain recoverable.
+- Added repository-wide `.editorconfig`, build analyzers, warnings-as-errors,
+  deterministic builds and native/Harmony API contract checks.
+- Found and fixed three integration defects with Workshop `3747606832`
+  v0.1.3 and RitsuLib v0.4.66:
+  - ready was waiting for a sidecar that upstream sends only after ready;
+  - BetterCoop consumed RitsuLib's 36-byte native trailer instead of advancing
+    only its own length-prefixed envelope;
+  - clients incorrectly required direct handshakes with every peer instead of
+    accepting the host-relayed capability proofs of the star topology.
+- The upstream source confirms `_remoteHostSettings` is populated only after
+  `RunManager` exists. Lobby gates now require the full pre-run contract and
+  matching local setting digest; strict post-run G13 (and R1) still requires
+  `SettingsSynchronized`.
+- Automated evidence against isolated STS2 v0.109.1:
+  - Release build: 0 warnings / 0 errors;
+  - persistence/protocol self-check: passed at 10,000 parser fuzz iterations;
+  - ENet 2/4 baseline:
+    `artifacts/f7-matrix/summary-20260730-181800.json`;
+  - ENet 5 with Limit Break/RitsuLib:
+    `artifacts/f7-matrix/summary-20260730-184815.json`;
+  - ENet 8 with Limit Break/RitsuLib:
+    `artifacts/f7-matrix/summary-20260730-184913.json`.
+- The 5/8 results prove join, ready, embark, every-peer protocol negotiation
+  and collaboration sentinels. They do not yet prove two combat turns,
+  room/save/load coverage, R1 multi-client rollback, real Steam five-player,
+  MP16 or the eight-hour soak.
+- Nothing was installed into the live game, committed, pushed or uploaded.
+
+### 03:19 - BetterCoop v0.6.0 RC1 engineering gates
+
+- All four C# projects passed `dotnet format whitespace/style
+  --verify-no-changes`; the naming rules distinguish private constants and
+  static-readonly fields from mutable private fields.
+- BetterCoop, HarmonySmoke and BetterCoopTestDriver Release builds completed
+  with zero warnings and zero errors against the isolated STS2 v0.109.1
+  fixture.
+- FingerprintSelfCheck passed with 1,000,000 parser-fuzz iterations, including
+  rollback archive/activate/recover/commit and Run Control protocol checks.
+- The retained 5-player and 8-player Godot logs contain 5/5 and 8/8 protocol
+  plus collaboration success sentinels respectively, with no protocol
+  failure, collaboration failure, unhandled-exception or fatal marker.
+- Tracked JSON/XML parsing and `git diff --check` passed. PSScriptAnalyzer was
+  not run because the module is not installed; no dependency was added only
+  for this check.
+- Created the non-overwriting two-file candidate
+  `artifacts/staging/v0.6.0-bettercoop-20260731-rc1`:
+  - `BetterCoop.dll`: 635,904 bytes,
+    SHA-256 `8080A4FF5CA739AB673FD97A629C5E3C35F9C5C17953052BC2989B18F296D5D2`;
+  - `BetterCoop.json`: 431 bytes,
+    SHA-256 `C334040720EF0E26B37A6DE6555BC3FB7D4D3893953EE69A8E93507E9862C601`.
+- Binary scans found neither test fault IDs (`CG-FLT-`) nor the old
+  `CoopGuard` brand. The live game, GitHub and Workshop remain unchanged.

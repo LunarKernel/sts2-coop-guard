@@ -46,7 +46,7 @@ if ([string]::Equals(
 }
 
 foreach ($count in $PlayerCounts) {
-    if ($count -lt 2 -or $count -gt 4) {
+    if ($count -lt 2 -or $count -gt 16) {
         throw "Unsupported player count: $count"
     }
 }
