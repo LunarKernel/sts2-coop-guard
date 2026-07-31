@@ -7,6 +7,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="../../src/CoopGuard/FingerprintCodec.cs" Link="FingerprintCodec.cs" />
+    <Compile Include="../../src/BetterCoop/FingerprintCodec.cs" Link="FingerprintCodec.cs" />
+    <Compile Include="../../src/BetterCoop/IncidentExplainer.cs" Link="IncidentExplainer.cs" />
+    <Compile Include="../../src/BetterCoop/PackageHasher.cs" Link="PackageHasher.cs" />
+    <Compile Include="../../src/BetterCoop/ToolkitCore.cs" Link="ToolkitCore.cs" />
+    <Compile Include="../../src/BetterCoop/ToolkitCollaborationCore.cs" Link="ToolkitCollaborationCore.cs" />
+    <Compile Include="../../src/BetterCoop/ToolkitDoctorCore.cs" Link="ToolkitDoctorCore.cs" />
+    <Compile Include="../../src/BetterCoop/ToolkitPersistence.cs" Link="ToolkitPersistence.cs" />
+    <Compile Include="../../src/BetterCoop/ToolkitProtocolCore.cs" Link="ToolkitProtocolCore.cs" />
+    <Compile Include="../../src/BetterCoop/ToolkitForensicsCore.cs" Link="ToolkitForensicsCore.cs" />
+    <Compile Include="../../src/BetterCoop/ToolkitReportComparison.cs" Link="ToolkitReportComparison.cs" />
+    <Compile Include="../../src/BetterCoop/ToolkitSettingsCore.cs" Link="ToolkitSettingsCore.cs" />
   </ItemGroup>
 </Project>

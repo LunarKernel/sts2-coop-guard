@@ -1,0 +1,12 @@
+{
+  "id": "BetterCoop",
+  "name": "BetterCoop",
+  "author": "LunarKernel",
+  "description": "A safety-first multiplayer toolkit with package checks, peer text, live teammate hands, Limit Break validation, seed/RNG analysis, actionable diagnosis, and experimental host room rollback.",
+  "version": "v0.6.0",
+  "min_game_version": "0.109.1",
+  "has_pck": false,
+  "has_dll": true,
+  "dependencies": [],
+  "affects_gameplay": true
+}

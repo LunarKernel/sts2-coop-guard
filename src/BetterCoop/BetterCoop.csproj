@@ -3,17 +3,21 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Deterministic>true</Deterministic>
-    <AssemblyName>CoopGuard</AssemblyName>
-    <RootNamespace>CoopGuard</RootNamespace>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <PathMap>$(MSBuildProjectDirectory)=/_/src/BetterCoop</PathMap>
+    <Version>0.6.0</Version>
+    <AssemblyName>BetterCoop</AssemblyName>
+    <RootNamespace>BetterCoop</RootNamespace>
     <NoWarn>$(NoWarn);MSB3270</NoWarn>
 
     <RegistrySts2Path>$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 2868840', 'InstallLocation', '', RegistryView.Registry64, RegistryView.Registry32))</RegistrySts2Path>
     <Sts2Path Condition="'$(Sts2Path)' == '' and Exists('$(RegistrySts2Path)')">$(RegistrySts2Path)</Sts2Path>
     <Sts2Path Condition="'$(Sts2Path)' == ''">C:/Program Files (x86)/Steam/steamapps/common/Slay the Spire 2</Sts2Path>
     <Sts2DataDir>$(Sts2Path)/data_sts2_windows_x86_64</Sts2DataDir>
-    <PackageDir>$(MSBuildProjectDirectory)/../../artifacts/CoopGuard</PackageDir>
+    <PackageDir>$(MSBuildProjectDirectory)/../../artifacts/BetterCoop</PackageDir>
+    <CreateModPackage Condition="'$(CreateModPackage)' == ''">false</CreateModPackage>
   </PropertyGroup>
 
   <ItemGroup Condition="Exists('$(Sts2DataDir)')">
@@ -32,7 +36,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="CoopGuard.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="BetterCoop.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <Target Name="CheckSts2Path" BeforeTargets="ResolveReferences">
@@ -41,9 +45,18 @@
       Condition="!Exists('$(Sts2DataDir)/sts2.dll')" />
   </Target>
 
-  <Target Name="PackageMod" AfterTargets="Build">
+  <Target
+    Name="PackageMod"
+    AfterTargets="Build"
+    Condition="'$(CreateModPackage)' == 'true'">
+    <Error
+      Text="Mod packages must be created from a Release build."
+      Condition="'$(Configuration)' != 'Release'" />
+    <Error
+      Text="Package directory already exists: '$(PackageDir)'. Use a new empty staging path."
+      Condition="Exists('$(PackageDir)')" />
     <MakeDir Directories="$(PackageDir)" />
-    <Copy SourceFiles="$(TargetPath);$(MSBuildProjectDirectory)/CoopGuard.json"
+    <Copy SourceFiles="$(TargetPath);$(MSBuildProjectDirectory)/BetterCoop.json"
           DestinationFolder="$(PackageDir)" />
   </Target>
 </Project>

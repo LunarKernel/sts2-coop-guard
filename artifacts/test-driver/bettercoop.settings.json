@@ -1,0 +1,9 @@
+{
+  "Schema": 1,
+  "Providers": [
+    {
+      "Id": "BetterCoopTestDriver",
+      "Schema": 1
+    }
+  ]
+}

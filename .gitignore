@@ -1,4 +1,12 @@
 artifacts/
+!artifacts/
+artifacts/*
+!artifacts/test-driver/
+artifacts/test-driver/*
+!artifacts/test-driver/Main.cs
+!artifacts/test-driver/BetterCoopTestDriver.csproj
+!artifacts/test-driver/BetterCoopTestDriver.json
+!artifacts/test-driver/bettercoop.settings.json
 bin/
 obj/
 .idea/

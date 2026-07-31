@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>$(GameDataDir)/0Harmony.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="CheckGameDataDir" BeforeTargets="ResolveReferences">
+    <Error
+      Text="Pass -p:GameDataDir=&quot;.../data_sts2_windows_x86_64&quot;."
+      Condition="!Exists('$(GameDataDir)/0Harmony.dll')" />
+  </Target>
+</Project>
